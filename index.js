@@ -16,7 +16,14 @@ if (fs.existsSync(credentialsPath)) {
 }
 
 const app = express();
-app.use(cors());
+
+// Set up CORS to allow requests from the frontend
+const corsOptions = {
+  origin: 'http://localhost:3000',
+  optionsSuccessStatus: 200 // For legacy browser support
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 // Add a root route for testing
@@ -30,12 +37,10 @@ app.get('/', (req, res) => {
     }
   });
 });
-
-app.use('/api/speech-to-text', require('./routes/speechToText'));
 app.use('/api/translate', require('./routes/translateText'));
 app.use('/api/text-to-speech', require('./routes/textToSpeech'));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Add error handling
