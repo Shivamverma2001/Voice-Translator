@@ -39,24 +39,50 @@ function translateWithGoogle(text, targetLang) {
     // Use Google Translate's free web service
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
     
+    console.log(`🌐 Translating to ${targetCode}: "${text}"`);
+    
     https.get(url, (response) => {
       if (response.statusCode === 200) {
         let data = '';
         response.on('data', (chunk) => data += chunk);
         response.on('end', () => {
           try {
+            console.log('📥 Raw Google response:', data);
+            
             // Parse the response (Google Translate returns a complex array)
             const result = JSON.parse(data);
-            const translation = result[0][0][0];
+            console.log('🔍 Parsed result:', JSON.stringify(result, null, 2));
+            
+            // Handle different response structures
+            let translation = '';
+            if (result && result[0] && Array.isArray(result[0])) {
+              // Extract all translation parts and join them
+              translation = result[0]
+                .filter(item => item && item[0]) // Filter out null/undefined items
+                .map(item => item[0]) // Get the translation text
+                .join(''); // Join all parts
+            } else if (result && typeof result === 'string') {
+              translation = result;
+            } else {
+              throw new Error('Unexpected response structure');
+            }
+            
+            console.log(`✨ Translation result: "${translation}"`);
             resolve(translation);
           } catch (error) {
-            reject(new Error('Failed to parse translation response'));
+            console.error('❌ Parse error:', error);
+            console.error('Raw data:', data);
+            reject(new Error(`Failed to parse translation response: ${error.message}`));
           }
         });
       } else {
+        console.error(`❌ HTTP error: ${response.statusCode}`);
         reject(new Error(`HTTP ${response.statusCode}`));
       }
-    }).on('error', reject);
+    }).on('error', (error) => {
+      console.error('❌ Network error:', error);
+      reject(error);
+    });
   });
 }
 

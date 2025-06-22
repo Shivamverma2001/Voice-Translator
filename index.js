@@ -2,17 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-// Set up Google Cloud authentication
-const fs = require('fs');
-const path = require('path');
+// Check for required environment variables
+if (!process.env.SPEECHMATICS_API_KEY) {
+  console.error('SPEECHMATICS_API_KEY environment variable is required');
+  process.exit(1);
+}
 
-// Read the API key from google-credentials.json
-const credentialsPath = path.join(__dirname, 'google-credentials.json');
-if (fs.existsSync(credentialsPath)) {
-  const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-  process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-  // Set the API key for Google Cloud services
-  process.env.GOOGLE_API_KEY = credentials.api_key;
+if (!process.env.GEMINI_API_KEY) {
+  console.error('GEMINI_API_KEY environment variable is required for intelligent text cleaning');
+  process.exit(1);
 }
 
 const app = express();
@@ -29,15 +27,22 @@ app.use(express.json());
 // Add a root route for testing
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Voice Translator Backend API',
+    message: 'Smart Voice Translator Backend API',
     endpoints: {
-      'POST /api/speech-to-text': 'Convert audio to text',
-      'POST /api/translate': 'Translate text between languages',
+      'POST /api/speech-to-text': 'Convert audio to text (batch)',
+      'POST /api/realtime-speech-to-text/start': 'Start real-time transcription session',
+      'POST /api/realtime-speech-to-text/audio': 'Send audio chunk for real-time transcription',
+      'POST /api/realtime-speech-to-text/stop': 'Stop real-time transcription session',
+      'POST /api/translate': 'Translate text (for voice mode)',
+      'POST /api/manual-translate': 'Translate text (for manual input)',
       'POST /api/text-to-speech': 'Convert text to speech'
     }
   });
 });
+app.use('/api/speech-to-text', require('./routes/speechToText'));
+app.use('/api/realtime-speech-to-text', require('./routes/realtimeSpeechToText'));
 app.use('/api/translate', require('./routes/translateText'));
+app.use('/api/manual-translate', require('./routes/manualTranslate'));
 app.use('/api/text-to-speech', require('./routes/textToSpeech'));
 
 const PORT = process.env.PORT || 5001;
