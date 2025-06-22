@@ -1,9 +1,42 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const https = require('https');
+const { PassThrough } = require('stream');
 
 const router = express.Router();
+
+function chunkText(text, maxLength = 180) {
+  const sentences = text.match(/[^.!?]+[.!?]?(?:\s+|$)/g) || [];
+  const chunks = [];
+
+  sentences.forEach(sentence => {
+    let currentChunk = sentence.trim();
+    while (currentChunk.length > 0) {
+      if (currentChunk.length <= maxLength) {
+        chunks.push(currentChunk);
+        break;
+      }
+
+      // Find a good place to split (prefer commas, then spaces)
+      let splitPos = -1;
+      for (let i = maxLength - 1; i >= 0; i--) {
+        if (currentChunk[i] === ',' || currentChunk[i] === ' ') {
+          splitPos = i;
+          break;
+        }
+      }
+
+      if (splitPos === -1) {
+        // No good split point found, just hard-split at maxLength
+        splitPos = maxLength;
+      }
+
+      chunks.push(currentChunk.substring(0, splitPos + 1).trim());
+      currentChunk = currentChunk.substring(splitPos + 1).trim();
+    }
+  });
+
+  return chunks.filter(c => c.length > 0);
+}
 
 // Free TTS using Google Translate TTS (no API key needed)
 function getGoogleTTS(text, language = 'en') {
@@ -16,9 +49,14 @@ function getGoogleTTS(text, language = 'en') {
         response.on('data', (chunk) => chunks.push(chunk));
         response.on('end', () => resolve(Buffer.concat(chunks)));
       } else {
+        // Provide more detailed error logging
+        console.error(`Google TTS Error: Status ${response.statusCode} for text: "${text}"`);
         reject(new Error(`HTTP ${response.statusCode}`));
       }
-    }).on('error', reject);
+    }).on('error', (err) => {
+      console.error(`Google TTS Request Error: ${err.message}`);
+      reject(err);
+    });
   });
 }
 
@@ -30,17 +68,35 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    // Use free Google Translate TTS
-    const audioBuffer = await getGoogleTTS(text, languageCode);
-    const outputPath = `./tts-output-${Date.now()}.mp3`;
-    fs.writeFileSync(outputPath, audioBuffer);
+    const textChunks = chunkText(text);
+    console.log(`Splitting text into ${textChunks.length} chunks for TTS.`);
 
-    res.sendFile(path.resolve(outputPath), {}, (err) => {
-      fs.unlinkSync(outputPath); // clean up after sending
-    });
+    // Set headers for streaming audio
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    const passThrough = new PassThrough();
+    passThrough.pipe(res);
+
+    for (const chunk of textChunks) {
+      console.log(`Fetching TTS for: "${chunk}"`);
+      try {
+        const audioChunk = await getGoogleTTS(chunk, languageCode);
+        passThrough.write(audioChunk);
+      } catch (error) {
+        console.error(`Skipping a chunk due to TTS error: ${error.message}`);
+        // Continue with the next chunks even if one fails
+      }
+    }
+
+    passThrough.end();
+    console.log('Finished streaming all TTS chunks.');
+
   } catch (error) {
-    console.error('TTS Error:', error);
-    res.status(500).json({ error: 'Text-to-speech failed' });
+    console.error('TTS Main Error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Text-to-speech failed' });
+    }
   }
 });
 

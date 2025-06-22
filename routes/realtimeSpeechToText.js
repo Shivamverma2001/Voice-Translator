@@ -10,11 +10,32 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Store active sessions
 const activeSessions = new Map();
 
+// A map to get the full language name from its code
+const languageNames = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese (Mandarin)',
+  ar: 'Arabic',
+  hi: 'Hindi',
+  mr: 'Marathi',
+  te: 'Telugu',
+  ml: 'Malayalam',
+  ur: 'Urdu',
+};
+
 // Intelligent text cleaning using Gemini AI with rate limiting
-async function cleanTranscribedTextWithGemini(text) {
+async function cleanTranscribedTextWithGemini(text, language = 'en') {
   if (!text || !text.trim()) return text;
   
-  console.log('🔍 Gemini cleaning called with text:', text);
+  const languageName = languageNames[language] || 'the user\'s language';
+  console.log(`🔍 Gemini cleaning called for ${languageName} text:`, text);
   
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -25,11 +46,14 @@ async function cleanTranscribedTextWithGemini(text) {
     console.log('✅ GEMINI_API_KEY found, initializing model...');
     const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
     
-    const prompt = `Please clean and improve this transcribed speech text. Fix spacing, punctuation, capitalization, and grammar while preserving the original meaning. Make it sound natural and well-formatted.
+    const prompt = `A user is speaking ${languageName}. Please clean and improve the following transcribed text. 
+Fix any spacing, punctuation, capitalization, and grammar errors.
+It is critical that you preserve the original language and any natural code-switching (e.g., using English words in a Hindi sentence).
+Make the text sound natural and well-formatted as if a native speaker had written it.
 
 Original text: "${text}"
 
-Please return only the cleaned text without any explanations or quotes.`;
+Return only the cleaned text, with no extra explanations or quotes.`;
 
     console.log('📤 Sending request to Gemini...');
     const result = await model.generateContent(prompt);
@@ -192,7 +216,11 @@ router.post('/start', async (req, res) => {
       'ko': 'ko',
       'zh': 'zh',
       'ar': 'ar',
-      'hi': 'hi'
+      'hi': 'hi',
+      'mr': 'mr',
+      'te': 'te',
+      'ml': 'ml',
+      'ur': 'ur'
     };
 
     const speechmaticsLanguage = languageMap[languageCode] || 'en';
@@ -207,6 +235,7 @@ router.post('/start', async (req, res) => {
       client: new RealtimeClient(),
       transcript: '',
       partialTranscript: '',
+      languageCode: speechmaticsLanguage,
       createdAt: new Date()
     });
     
@@ -301,36 +330,36 @@ router.post('/stop', async (req, res) => {
     const { sessionId } = req.body;
     
     console.log(`Stop request for session: ${sessionId}`);
-    console.log(`Active sessions: ${Array.from(activeSessions.keys())}`);
     
     if (!sessionId || !activeSessions.has(sessionId)) {
       console.log(`Invalid session ID for stop: ${sessionId}`);
-      return res.status(400).json({ 
-        error: 'Invalid session ID',
-        providedSessionId: sessionId,
-        activeSessions: Array.from(activeSessions.keys())
-      });
+      return res.status(400).json({ error: 'Invalid session ID' });
     }
     
     const session = activeSessions.get(sessionId);
-    console.log(`Session ${sessionId} found, current transcript: "${session.transcript}"`);
+    console.log(`Session ${sessionId} found. Current transcript: "${session.transcript}", Partial: "${session.partialTranscript}"`);
     
-    // Stop the session
-    session.client.stopRecognition();
+    // Stop the session and wait for final transcripts
+    console.log(`Session ${sessionId} stopping recognition...`);
+    try {
+      await session.client.stopRecognition();
+      console.log(`Session ${sessionId} recognition stopped gracefully.`);
+    } catch (err) {
+      console.error(`Session ${sessionId} stopRecognition failed (timeout likely): ${err.message}`);
+      // Proceeding anyway, using the transcript we have.
+    }
     
-    // Wait a bit for any final events to be processed
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Combine final transcript with the last partial to get the full text
+    const fullTranscript = (session.transcript + ' ' + session.partialTranscript).trim();
+    console.log(`Session ${sessionId} full raw transcript: "${fullTranscript}"`);
+
+    // Clean the full transcript with Gemini, now with language context
+    const finalTranscript = await cleanTranscribedTextWithGemini(fullTranscript, session.languageCode);
     
-    // Get final transcript and clean it with Gemini
-    console.log(`Calling Gemini cleaning for: "${session.transcript}"`);
-    const finalTranscript = await cleanTranscribedTextWithGemini(session.transcript);
+    console.log(`Session ${sessionId} stopped and cleaned up. Final cleaned transcript: "${finalTranscript}"`);
     
-    console.log(`Session ${sessionId} stopped and cleaned up`);
-    console.log(`Final cleaned transcript: "${finalTranscript}"`);
-    
-    // Clean up session AFTER sending response
+    // Clean up session
     activeSessions.delete(sessionId);
-    console.log(`Remaining sessions: ${Array.from(activeSessions.keys())}`);
     
     res.json({ 
       transcript: finalTranscript,
@@ -343,4 +372,4 @@ router.post('/stop', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

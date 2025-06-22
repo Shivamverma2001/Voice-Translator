@@ -43,7 +43,15 @@ router.post('/', async (req, res) => {
       'arabic': 'ar',
       'ar': 'ar',
       'english': 'en',
-      'en': 'en'
+      'en': 'en',
+      'marathi': 'mr',
+      'mr': 'mr',
+      'telugu': 'te',
+      'te': 'te',
+      'malayalam': 'ml',
+      'ml': 'ml',
+      'urdu': 'ur',
+      'ur': 'ur'
     };
 
     const targetCode = langMap[targetLang.toLowerCase()] || targetLang;
