@@ -28,6 +28,7 @@ const languageNames = {
   te: 'Telugu',
   ml: 'Malayalam',
   ur: 'Urdu',
+  pa: 'Punjabi',
 };
 
 // Intelligent text cleaning using Gemini AI with rate limiting
@@ -220,7 +221,8 @@ router.post('/start', async (req, res) => {
       'mr': 'mr',
       'te': 'te',
       'ml': 'ml',
-      'ur': 'ur'
+      'ur': 'ur',
+      'pa': 'pa'
     };
 
     const speechmaticsLanguage = languageMap[languageCode] || 'en';
