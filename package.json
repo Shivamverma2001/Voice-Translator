@@ -18,6 +18,7 @@
     "@google-cloud/text-to-speech": "^6.1.0",
     "@google-cloud/translate": "^9.1.0",
     "@google/generative-ai": "^0.24.1",
+    "@react-native-voice/voice": "^3.2.4",
     "@speechmatics/batch-client": "^5.0.1",
     "@speechmatics/real-time-client": "^7.0.2",
     "cors": "^2.8.5",
