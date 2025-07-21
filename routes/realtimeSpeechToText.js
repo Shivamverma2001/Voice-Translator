@@ -47,10 +47,33 @@ async function cleanTranscribedTextWithGemini(text, language = 'en') {
     console.log('✅ GEMINI_API_KEY found, initializing model...');
     const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
     
-    const prompt = `A user is speaking ${languageName}. Please clean and improve the following transcribed text. 
-Fix any spacing, punctuation, capitalization, and grammar errors.
-It is critical that you preserve the original language and any natural code-switching (e.g., using English words in a Hindi sentence).
-Make the text sound natural and well-formatted as if a native speaker had written it.
+    const prompt = `A user is speaking ${languageName}. Please clean and improve the following transcribed text to sound like natural human speech:
+
+IMPORTANT RULES:
+1. Fix ALL spacing issues - ensure proper spaces between words, after punctuation
+2. Add proper punctuation (periods, commas, question marks, exclamation marks)
+3. Capitalize the first letter of sentences and proper nouns
+4. Fix grammar and make sentences complete and natural
+5. Preserve the original language and any natural code-switching
+6. Remove any transcription artifacts or repeated words
+7. Make the text sound like natural human conversation
+8. Use conversational language - add natural pauses, filler words if appropriate
+9. Keep the tone casual and friendly, like someone actually speaking
+10. Maintain the speaker's personality and speaking style
+
+LANGUAGE-SPECIFIC RULES:
+- For English: Add question marks for questions, proper articles (a, an, the), subject-verb agreement
+- For Hindi: Use proper Hindi punctuation (। for periods, ? for questions), maintain Hindi grammar structure
+- For Spanish: Use proper Spanish punctuation (¿ for questions, ¡ for exclamations), maintain Spanish grammar
+- For other languages: Use appropriate punctuation and grammar rules for that specific language
+- Always preserve the natural speaking style and cultural context of the language
+
+PUNCTUATION & GRAMMAR:
+- Identify if the text is a question, statement, or exclamation based on context and language
+- Add appropriate punctuation marks for the specific language
+- Fix grammar according to the language's rules
+- Make sentences complete and natural sounding
+- Preserve any code-switching between languages
 
 Original text: "${text}"
 
@@ -91,7 +114,16 @@ function cleanTranscribedTextBasic(text) {
     .replace(/(\d)([a-z])/g, '$1 $2') // Add space between numbers and letters
     // Fix specific transcription issues
     .replace(/([a-z]+)([A-Z][a-z]+)/g, '$1 $2') // mynameIs → my name Is
-    .replace(/([a-z])([A-Z][a-z]+)/g, '$1 $2'); // myName → my Name
+    .replace(/([a-z])([A-Z][a-z]+)/g, '$1 $2') // myName → my Name
+    // Fix spacing issues
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+  
+  // Add proper punctuation if missing
+  if (!cleaned.match(/[.!?]$/)) {
+    // If text doesn't end with punctuation, add a period
+    cleaned = cleaned + '.';
+  }
   
   // Add spaces around punctuation
   cleaned = cleaned
@@ -99,15 +131,25 @@ function cleanTranscribedTextBasic(text) {
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Capitalize first letter of sentences
+  // Capitalize first letter of sentences and proper nouns
   cleaned = cleaned.replace(/(^|\.\s+)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase());
   
-  // Fix spacing
+  // Fix spacing around punctuation
   cleaned = cleaned
     .replace(/\s+([.!?,:;])/g, '$1') // Remove spaces before punctuation
     .replace(/([.!?,:;])\s+/g, '$1 ') // Ensure space after punctuation
     .replace(/\s+/g, ' ') // Normalize multiple spaces
     .trim();
+  
+  // Remove duplicate words (simple approach)
+  const words = cleaned.split(' ');
+  const uniqueWords = [];
+  for (let i = 0; i < words.length; i++) {
+    if (i === 0 || words[i] !== words[i-1]) {
+      uniqueWords.push(words[i]);
+    }
+  }
+  cleaned = uniqueWords.join(' ');
   
   console.log('🔧 Basic cleaning result:', cleaned);
   return cleaned;

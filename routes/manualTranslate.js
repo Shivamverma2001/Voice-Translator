@@ -1,5 +1,6 @@
 const express = require('express');
 const { BatchClient } = require('@speechmatics/batch-client');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const router = express.Router();
 
@@ -9,13 +10,167 @@ const client = new BatchClient({
   appId: 'voice-translator-manual' 
 });
 
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// A map to get the full language name from its code
+const languageNames = {
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ru: 'Russian',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese (Mandarin)',
+  ar: 'Arabic',
+  hi: 'Hindi',
+  mr: 'Marathi',
+  te: 'Telugu',
+  ml: 'Malayalam',
+  ur: 'Urdu',
+  pa: 'Punjabi',
+};
+
+// Intelligent text cleaning using Gemini AI with rate limiting
+async function cleanTextWithGemini(text, language = 'en') {
+  if (!text || !text.trim()) return text;
+  
+  const languageName = languageNames[language] || 'the user\'s language';
+  console.log(`🔍 Gemini cleaning called for ${languageName} text:`, text);
+  
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ GEMINI_API_KEY not found in environment');
+      return cleanTextBasic(text);
+    }
+    
+    console.log('✅ GEMINI_API_KEY found, initializing model...');
+    const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
+    
+    const prompt = `A user is writing ${languageName}. Please clean and improve the following text to sound like natural human speech:
+
+IMPORTANT RULES:
+1. Fix ALL spacing issues - ensure proper spaces between words, after punctuation
+2. Add proper punctuation (periods, commas, question marks, exclamation marks)
+3. Capitalize the first letter of sentences and proper nouns
+4. Fix grammar and make sentences complete and natural
+5. Preserve the original language and any natural code-switching
+6. Remove any transcription artifacts or repeated words
+7. Make the text sound like natural human conversation
+8. Use conversational language - add natural pauses, filler words if appropriate
+9. Keep the tone casual and friendly, like someone actually speaking
+10. Maintain the speaker's personality and speaking style
+
+LANGUAGE-SPECIFIC RULES:
+- For English: Add question marks for questions, proper articles (a, an, the), subject-verb agreement
+- For Hindi: Use proper Hindi punctuation (। for periods, ? for questions), maintain Hindi grammar structure
+- For Spanish: Use proper Spanish punctuation (¿ for questions, ¡ for exclamations), maintain Spanish grammar
+- For other languages: Use appropriate punctuation and grammar rules for that specific language
+- Always preserve the natural speaking style and cultural context of the language
+
+PUNCTUATION & GRAMMAR:
+- Identify if the text is a question, statement, or exclamation based on context and language
+- Add appropriate punctuation marks for the specific language
+- Fix grammar according to the language's rules
+- Make sentences complete and natural sounding
+- Preserve any code-switching between languages
+
+Original text: "${text}"
+
+Return only the cleaned text, with no extra explanations or quotes.`;
+
+    console.log('📤 Sending request to Gemini...');
+    const result = await model.generateContent(prompt);
+    const cleanedText = result.response.text().trim();
+    
+    console.log(`✨ Gemini cleaned text: "${text}" → "${cleanedText}"`);
+    return cleanedText;
+  } catch (error) {
+    console.error('❌ Gemini text cleaning error:', error);
+    console.error('Error details:', error.message);
+    
+    // Handle rate limiting specifically
+    if (error.status === 429) {
+      console.log('⚠️ Rate limit hit, using basic cleaning as fallback');
+      return cleanTextBasic(text);
+    }
+    
+    // Fallback to basic cleaning if Gemini fails
+    return cleanTextBasic(text);
+  }
+}
+
+// Basic fallback text cleaning function
+function cleanTextBasic(text) {
+  if (!text) return text;
+  
+  console.log('🔧 Using basic cleaning for:', text);
+  
+  // Basic spacing fixes
+  let cleaned = text
+    // Fix common text patterns
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
+    .replace(/([a-z])(\d)/g, '$1 $2') // Add space between letters and numbers
+    .replace(/(\d)([a-z])/g, '$1 $2') // Add space between numbers and letters
+    // Fix specific text issues
+    .replace(/([a-z]+)([A-Z][a-z]+)/g, '$1 $2') // mynameIs → my name Is
+    .replace(/([a-z])([A-Z][a-z]+)/g, '$1 $2') // myName → my Name
+    // Fix spacing issues
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+  
+  // Add proper punctuation if missing
+  if (!cleaned.match(/[.!?]$/)) {
+    // If text doesn't end with punctuation, add a period
+    cleaned = cleaned + '.';
+  }
+  
+  // Add spaces around punctuation
+  cleaned = cleaned
+    .replace(/([.!?,:;])/g, ' $1 ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Capitalize first letter of sentences and proper nouns
+  cleaned = cleaned.replace(/(^|\.\s+)([a-z])/g, (match, p1, p2) => p1 + p2.toUpperCase());
+  
+  // Fix spacing around punctuation
+  cleaned = cleaned
+    .replace(/\s+([.!?,:;])/g, '$1') // Remove spaces before punctuation
+    .replace(/([.!?,:;])\s+/g, '$1 ') // Ensure space after punctuation
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+  
+  // Remove duplicate words (simple approach)
+  const words = cleaned.split(' ');
+  const uniqueWords = [];
+  for (let i = 0; i < words.length; i++) {
+    if (i === 0 || words[i] !== words[i-1]) {
+      uniqueWords.push(words[i]);
+    }
+  }
+  cleaned = uniqueWords.join(' ');
+  
+  console.log('🔧 Basic cleaning result:', cleaned);
+  return cleaned;
+}
+
 router.post('/', async (req, res) => {
   try {
-    const { text, targetLang } = req.body;
+    const { text, targetLang, sourceLang = 'en' } = req.body;
 
     if (!text || !targetLang) {
       return res.status(400).json({ error: 'Missing required fields: text and targetLang' });
     }
+
+    console.log(`📝 Manual translation request: "${text}" from ${sourceLang} to ${targetLang}`);
+    
+    // First, clean the input text using Gemini AI
+    const cleanedText = await cleanTextWithGemini(text, sourceLang);
+    console.log(`✨ Text cleaned: "${text}" → "${cleanedText}"`);
 
     // For manual text, we'll use the free Google Translate service
     // since Speechmatics is for audio transcription, not text translation
@@ -58,7 +213,7 @@ router.post('/', async (req, res) => {
     
     // Use Google Translate's free web service for text translation
     const https = require('https');
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(cleanedText)}`;
     
     const translation = await new Promise((resolve, reject) => {
       https.get(url, (response) => {
@@ -86,8 +241,8 @@ router.post('/', async (req, res) => {
                 throw new Error('Unexpected response structure');
               }
               
-              console.log(`✨ Manual translation result: "${translation}"`);
-              resolve(translation);
+                  console.log(`✨ Manual translation result: "${translation}"`);
+    resolve({ translation, cleanedText });
             } catch (error) {
               console.error('❌ Manual parse error:', error);
               console.error('Raw data:', data);
@@ -104,11 +259,37 @@ router.post('/', async (req, res) => {
       });
     });
 
-    res.json({ translatedText: translation });
+    res.json({ 
+      translatedText: translation.translation,
+      cleanedText: translation.cleanedText 
+    });
     
   } catch (error) {
     console.error('Manual Translation Error:', error);
     res.status(500).json({ error: 'Manual translation failed: ' + error.message });
+  }
+});
+
+// Test endpoint for Gemini text cleaning
+router.post('/test-gemini', async (req, res) => {
+  try {
+    const { text, language = 'en' } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    
+    const cleanedText = await cleanTextWithGemini(text, language);
+    res.json({ 
+      original: text,
+      cleaned: cleanedText,
+      status: 'success'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Gemini test failed',
+      error: error.message
+    });
   }
 });
 
