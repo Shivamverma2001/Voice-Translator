@@ -35,6 +35,7 @@ app.get('/', (req, res) => {
       'POST /api/realtime-speech-to-text/stop': 'Stop real-time transcription session',
       'POST /api/translate': 'Translate text (for voice mode)',
       'POST /api/manual-translate': 'Translate text (for manual input)',
+      'POST /api/image-translate': 'Extract and translate text from images',
       'POST /api/text-to-speech': 'Convert text to speech'
     }
   });
@@ -43,6 +44,7 @@ app.use('/api/speech-to-text', require('./routes/speechToText'));
 app.use('/api/realtime-speech-to-text', require('./routes/realtimeSpeechToText'));
 app.use('/api/translate', require('./routes/translateText'));
 app.use('/api/manual-translate', require('./routes/manualTranslate'));
+app.use('/api/image-translate', require('./routes/imageTranslate'));
 app.use('/api/text-to-speech', require('./routes/textToSpeech'));
 
 const PORT = process.env.PORT || 5001;

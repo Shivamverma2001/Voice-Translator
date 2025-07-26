@@ -24,6 +24,7 @@ const languageNames = {
   zh: 'Chinese (Mandarin)',
   ar: 'Arabic',
   hi: 'Hindi',
+  sa: 'Sanskrit',
   mr: 'Marathi',
   te: 'Telugu',
   ml: 'Malayalam',

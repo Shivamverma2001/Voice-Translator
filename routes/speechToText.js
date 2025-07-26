@@ -43,7 +43,8 @@ router.post('/', upload.single('audio'), async (req, res) => {
       'ko': 'ko',
       'zh': 'zh',
       'ar': 'ar',
-      'hi': 'hi'
+      'hi': 'hi',
+      'sa': 'sa'
     };
 
     const speechmaticsLanguage = languageMap[languageCode] || 'en';
