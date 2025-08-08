@@ -2,13 +2,13 @@
   "name": "voice-translator-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "backend/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
+    "start": "node backend/index.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "node index.js",
-    "client": "cd frontend && npm start"
+    "server": "node backend/index.js",
+    "client": "cd frontend && REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL:-http://localhost:5001} npm start"
   },
   "proxy": "http://localhost:5001",
   "author": "",

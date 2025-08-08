@@ -37,6 +37,44 @@ function chunkText(text, maxLength = 180) {
 
   return chunks.filter(c => c.length > 0);
 }
+// Cache working TTS language per requested code to avoid repeated failures
+const ttsLangCache = new Map(); // key: requested lang, value: working lang
+
+function getBaseLang(lang = '') {
+  if (!lang) return '';
+  const idx = lang.indexOf('-');
+  return idx > 0 ? lang.slice(0, idx) : lang;
+}
+
+async function getTtsWithFallback(text, requestedLanguage = 'en') {
+  // Prepare candidates in order
+  const candidates = [];
+  const cached = ttsLangCache.get(requestedLanguage);
+  if (cached) candidates.push(cached);
+  if (requestedLanguage) candidates.push(requestedLanguage);
+  const base = getBaseLang(requestedLanguage);
+  if (base && base !== requestedLanguage) candidates.push(base);
+  candidates.push('en');
+
+  // Deduplicate while preserving order
+  const unique = [...new Set(candidates.filter(Boolean))];
+
+  let lastError = null;
+  for (const cand of unique) {
+    try {
+      const audio = await getGoogleTTS(text, cand);
+      // Cache the working mapping for future chunks
+      ttsLangCache.set(requestedLanguage, cand);
+      return { audio, usedLang: cand };
+    } catch (err) {
+      lastError = err;
+      continue;
+    }
+  }
+  throw lastError || new Error('TTS failed for all candidates');
+}
+
+// Removed hardcoded/script-based detection per request. Fallback covers unknowns.
 
 // Free TTS using Google Translate TTS (no API key needed)
 function getGoogleTTS(text, language = 'en') {
@@ -50,7 +88,7 @@ function getGoogleTTS(text, language = 'en') {
         response.on('end', () => resolve(Buffer.concat(chunks)));
       } else {
         // Provide more detailed error logging
-        console.error(`Google TTS Error: Status ${response.statusCode} for text: "${text}"`);
+        console.error(`Google TTS Error: Status ${response.statusCode} for text: "${text}" (lang: ${language})`);
         reject(new Error(`HTTP ${response.statusCode}`));
       }
     }).on('error', (err) => {
@@ -79,12 +117,12 @@ router.post('/', async (req, res) => {
     passThrough.pipe(res);
 
     for (const chunk of textChunks) {
-      console.log(`Fetching TTS for: "${chunk}"`);
       try {
-        const audioChunk = await getGoogleTTS(chunk, languageCode);
-        passThrough.write(audioChunk);
+        const { audio, usedLang } = await getTtsWithFallback(chunk, languageCode);
+        console.log(`TTS ok (requested: ${languageCode}, used: ${usedLang}) for: "${chunk}"`);
+        passThrough.write(audio);
       } catch (error) {
-        console.error(`Skipping a chunk due to TTS error: ${error.message}`);
+        console.error(`Skipping a chunk due to TTS error after fallbacks: ${error.message}`);
         // Continue with the next chunks even if one fails
       }
     }

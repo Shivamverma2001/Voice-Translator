@@ -32,19 +32,35 @@ const io = socketIo(server, {
   }
 });
 
-// Set up CORS to allow requests from the frontend and ngrok
+// Set up CORS to allow requests from the frontend and mobile apps
+// Configure via env var ALLOWED_ORIGINS as a comma-separated list
+const defaultOrigins = [
+  'http://localhost:3000',
+  'http://localhost:8081', // RN Metro
+  'http://localhost:19006', // Expo dev
+];
+const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'https://5c32c8a89e6e.ngrok-free.app',
-    'https://*.ngrok-free.app', // Allow any ngrok subdomain
-    'http://localhost:8081', // React Native Metro bundler
-    'http://localhost:19006', // Expo dev server
-  ],
-  optionsSuccessStatus: 200, // For legacy browser support
-  credentials: true, // Allow credentials
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g., mobile apps, curl)
+    if (!origin) return callback(null, true);
+    const isAllowed = allowedOrigins.some((allowed) => {
+      if (allowed === '*') return true;
+      // Simple exact match; extend if you need wildcard domains
+      return origin === allowed;
+    });
+    if (isAllowed) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 

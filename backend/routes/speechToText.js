@@ -2,10 +2,18 @@ const express = require('express');
 const multer = require('multer');
 const { BatchClient } = require('@speechmatics/batch-client');
 const fs = require('fs');
+const path = require('path');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const router = express.Router();
-const upload = multer({ dest: 'uploads/' });
+// Ensure uploads directory exists within backend folder
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+try {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+} catch (e) {
+  // no-op; directory may already exist
+}
+const upload = multer({ dest: uploadsDir });
 
 // Initialize Speechmatics client
 const client = new BatchClient({ 
