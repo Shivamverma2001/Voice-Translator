@@ -276,27 +276,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Test endpoint for Gemini text cleaning
-router.post('/test-gemini', async (req, res) => {
-  try {
-    const { text, language = 'en' } = req.body;
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
-    }
-    
-    const cleanedText = await cleanTextWithGemini(text, language);
-    res.json({ 
-      original: text,
-      cleaned: cleanedText,
-      status: 'success'
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'error',
-      message: 'Gemini test failed',
-      error: error.message
-    });
-  }
-});
+
 
 module.exports = router;

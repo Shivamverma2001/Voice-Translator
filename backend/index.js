@@ -19,14 +19,28 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "https://5c32c8a89e6e.ngrok-free.app",
-      "https://*.ngrok-free.app",
-      "http://localhost:8081",
-      "http://localhost:19006",
-      "*" // Allow all origins for development
-    ],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g., mobile apps, curl)
+      if (!origin) return callback(null, true);
+      
+      // Always allow ngrok domains
+      if (origin.includes('ngrok-free.app') || origin.includes('ngrok.io')) {
+        return callback(null, true);
+      }
+      
+      // Allow localhost and other allowed origins
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:8081',
+        'http://localhost:19006'
+      ];
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      return callback(null, true); // Allow all for development
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true
   }
@@ -38,6 +52,8 @@ const defaultOrigins = [
   'http://localhost:3000',
   'http://localhost:8081', // RN Metro
   'http://localhost:19006', // Expo dev
+  'https://*.ngrok-free.app', // Allow all ngrok URLs
+  'https://*.ngrok.io', // Allow legacy ngrok URLs
 ];
 const envOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -49,11 +65,18 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (e.g., mobile apps, curl)
     if (!origin) return callback(null, true);
+    
+    // Always allow ngrok domains
+    if (origin.includes('ngrok-free.app') || origin.includes('ngrok.io')) {
+      return callback(null, true);
+    }
+    
     const isAllowed = allowedOrigins.some((allowed) => {
       if (allowed === '*') return true;
-      // Simple exact match; extend if you need wildcard domains
+      // Simple exact match for other domains
       return origin === allowed;
     });
+    
     if (isAllowed) return callback(null, true);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
@@ -98,20 +121,52 @@ io.on('connection', (socket) => {
   // Join a call room
   socket.on('join-call', (data) => {
     const { roomId, userId, username, userLanguage, targetLanguage, isCreator } = data;
+    
+    // If this is NOT the creator, we need to find the creator's languages and reverse them
+    let finalUserLanguage = userLanguage;
+    let finalTargetLanguage = targetLanguage;
+    
+    if (!isCreator) {
+      // Find the creator in this room to get their language settings
+      const existingRoom = io.sockets.adapter.rooms.get(roomId);
+      if (existingRoom) {
+        existingRoom.forEach(socketId => {
+          const userSocket = io.sockets.sockets.get(socketId);
+          if (userSocket && userSocket.isCreator) {
+            // Reverse the creator's languages for the joiner
+            finalUserLanguage = userSocket.targetLanguage;  // Creator's target becomes joiner's source
+            finalTargetLanguage = userSocket.userLanguage;  // Creator's source becomes joiner's target
+            
+            console.log(`🔄 Auto-reversing languages for joiner:`);
+            console.log(`👑 Creator languages: ${userSocket.userLanguage} → ${userSocket.targetLanguage}`);
+            console.log(`👤 Joiner languages: ${finalUserLanguage} → ${finalTargetLanguage}`);
+          }
+        });
+      }
+      
+      // If joiner didn't send language preferences (null/undefined), always use the reversed creator languages
+      if (!userLanguage || !targetLanguage) {
+        console.log(`🔄 Joiner sent no language preferences, using auto-reversed creator languages`);
+      }
+    }
+    
     socket.join(roomId);
     socket.roomId = roomId;
     socket.userId = userId;
     socket.username = username;
-    socket.userLanguage = userLanguage;
-    socket.targetLanguage = targetLanguage;
+    socket.userLanguage = finalUserLanguage;
+    socket.targetLanguage = finalTargetLanguage;
     socket.isCreator = isCreator;
     
     console.log(`📞 User joined call room:`);
     console.log(`👤 Username: ${username}`);
     console.log(`🆔 User ID: ${userId}`);
     console.log(`🏠 Room ID: ${roomId}`);
-    console.log(`🌐 Languages: ${userLanguage} ↔ ${targetLanguage}`);
+    console.log(`🌐 Languages: ${finalUserLanguage} ↔ ${finalTargetLanguage}`);
     console.log(`👑 Call Creator: ${isCreator ? 'Yes' : 'No'}`);
+    if (!isCreator) {
+      console.log(`🔄 Languages auto-reversed from creator's settings`);
+    }
     console.log(`⏰ Time: ${new Date().toLocaleString()}`);
     
     // Get all users in the room
@@ -124,11 +179,21 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('user-joined', {
       userId,
       username,
-      userLanguage,
-      targetLanguage,
+      userLanguage: finalUserLanguage,
+      targetLanguage: finalTargetLanguage,
       isCreator
     });
-    
+
+    // Send language confirmation to the joining user
+    socket.emit('languages-confirmed', {
+      userLanguage: finalUserLanguage,
+      targetLanguage: finalTargetLanguage,
+      isCreator,
+      message: isCreator ? 
+        `Call created with languages: ${finalUserLanguage} → ${finalTargetLanguage}` :
+        `Joined call with languages: ${finalUserLanguage} → ${finalTargetLanguage} (auto-reversed from creator)`
+    });
+
     // Notify the joining user about existing users in the room
     const existingUsers = [];
     const existingRoom = io.sockets.adapter.rooms.get(roomId);
@@ -189,36 +254,51 @@ io.on('connection', (socket) => {
       const sourceLang = languages[userLanguage || socket.userLanguage] || 'English';
       const targetLang = languages[targetLanguage || socket.targetLanguage] || 'English';
       
-      const prompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text without any additional commentary or formatting:
+      // First, clean the transcribed text using Gemini
+      const cleaningPrompt = `Clean and correct the following transcribed text. If it's in English, fix spelling, grammar, and punctuation. If it's in another language (like Hindi, Spanish, etc.), convert it to proper text in that language. Return only the cleaned text without any additional commentary:
 
 Text: "${text}"
 
+Cleaned text:`;
+      
+      const cleaningResult = await model.generateContent(cleaningPrompt);
+      const cleanedText = cleaningResult.response.text().trim();
+      
+      console.log(`🧹 Text cleaning completed:`);
+      console.log(`📝 Raw transcription: "${text}"`);
+      console.log(`✨ Cleaned text: "${cleanedText}"`);
+      
+      // Now translate the cleaned text
+      const translationPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text without any additional commentary or formatting:
+
+Text: "${cleanedText}"
+
 Translation:`;
       
-      const result = await model.generateContent(prompt);
-      const translatedText = result.response.text().trim();
+      const translationResult = await model.generateContent(translationPrompt);
+      const translatedText = translationResult.response.text().trim();
       
       console.log(`🌐 Translation completed:`);
-      console.log(`📝 Original: "${text}"`);
+      console.log(`📝 Cleaned text: "${cleanedText}"`);
       console.log(`🔄 Translated: "${translatedText}"`);
-      console.log(`👤 From user: ${socket.username}`);
+      console.log(`👤 From user: ${username || socket.username} (event username: ${username}, socket username: ${socket.username})`);
       console.log(`⏰ Translation time: ${new Date().toLocaleString()}`);
       
-      // Send translated text to other users in the room
-      // Find all sockets in the room and emit to each with correct toUsername
+      // Send cleaned text and translation to ALL users in the room (including sender)
+      // This ensures both users see the complete conversation
       const room = io.sockets.adapter.rooms.get(roomId);
       if (room) {
         room.forEach(socketId => {
           const userSocket = io.sockets.sockets.get(socketId);
-          if (userSocket && userSocket.userId !== socket.userId) {
+          if (userSocket) { // Send to ALL users, including sender
             userSocket.emit('translated-speech', {
-              originalText: text,
+              originalText: cleanedText, // Send cleaned text instead of raw text
               translatedText: translatedText,
               fromUserId: socket.userId,
-              fromUsername: socket.username,
+              fromUsername: username || socket.username, // Use the username from the event
               fromLanguage: socket.userLanguage,
               toUserId: userSocket.userId,
-              toUsername: userSocket.username,
+              toUsername: username || userSocket.username,
               toLanguage: userSocket.userLanguage
             });
           }

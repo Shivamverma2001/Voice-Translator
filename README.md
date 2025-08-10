@@ -95,6 +95,75 @@ npm run android
 npm run ios
 ```
 
+## 🌐 Production/Public Access with ngrok
+
+### Prerequisites
+- [ngrok](https://ngrok.com/) installed and authenticated
+- `ngrok.yml` configuration file in project root
+
+### Step-by-Step Startup (3 Terminals)
+
+#### Terminal 1: Start Backend
+```bash
+cd backend
+npm start
+```
+**Wait for:** `Server running on port 5001`
+
+#### Terminal 2: Start Frontend
+```bash
+cd frontend
+HOST=0.0.0.0 DANGEROUSLY_DISABLE_HOST_CHECK=true npm start
+```
+**Wait for:** `Local:` and `On Your Network:` URLs
+
+#### Terminal 3: Start ngrok Tunnels
+```bash
+cd /Users/shivamverma/Desktop/voice-translator
+ngrok start --config=ngrok.yml backend frontend
+```
+
+### What You'll See
+
+**Terminal 1 (Backend):**
+```
+🔧 Starting backend server...
+✅ Server running on port 5001
+```
+
+**Terminal 2 (Frontend):**
+```
+🌐 Starting frontend server...
+✅ Local:            http://localhost:3000
+✅ On Your Network:  http://192.168.x.x:3000
+```
+
+**Terminal 3 (ngrok):**
+```
+🌍 Starting ngrok tunnels...
+✅ Backend:  https://abc123.ngrok-free.app -> http://localhost:5001
+✅ Frontend: https://xyz789.ngrok-free.app -> http://localhost:3000
+```
+
+### Your Public URLs
+- **Frontend:** `https://xyz789.ngrok-free.app` (use this to access your app)
+- **Backend:** `https://abc123.ngrok-free.app` (API calls go here)
+
+### Important Notes
+✅ **Keep all 3 terminals open**  
+✅ **Start them in order** (backend → frontend → ngrok)  
+✅ **Wait for each to fully start** before starting the next  
+✅ **Use the frontend ngrok URL** to access your app from anywhere  
+
+### To Stop Everything
+- Press `Ctrl+C` in each terminal
+- Or close the terminal windows
+
+### Troubleshooting
+- **Port already in use:** `pkill -f "node"` then restart
+- **Invalid Host header:** Make sure to use the `HOST=0.0.0.0 DANGEROUSLY_DISABLE_HOST_CHECK=true` flags
+- **CORS errors:** Backend automatically allows all ngrok domains
+
 ## 🔧 API Endpoints
 
 ### Core Translation

@@ -201,46 +201,7 @@ router.get('/debug', (req, res) => {
   });
 });
 
-// Test endpoint to check API key
-router.get('/test', async (req, res) => {
-  try {
-    const jwt = await fetchJWT();
-    res.json({ 
-      status: 'success',
-      message: 'API key is working',
-      hasJWT: !!jwt
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'error',
-      message: 'API key test failed',
-      error: error.message
-    });
-  }
-});
 
-// Test endpoint for Gemini text cleaning
-router.post('/test-gemini', async (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text) {
-      return res.status(400).json({ error: 'Text is required' });
-    }
-    
-    const cleanedText = await cleanTranscribedTextWithGemini(text);
-    res.json({ 
-      original: text,
-      cleaned: cleanedText,
-      status: 'success'
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'error',
-      message: 'Gemini test failed',
-      error: error.message
-    });
-  }
-});
 
 router.post('/start', async (req, res) => {
   try {
