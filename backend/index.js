@@ -288,9 +288,12 @@ Translation:`;
       // This ensures both users see the complete conversation
       const room = io.sockets.adapter.rooms.get(roomId);
       if (room) {
+        console.log(`🎯 Sending translation to other users in room ${roomId}:`);
         room.forEach(socketId => {
           const userSocket = io.sockets.sockets.get(socketId);
-          if (userSocket) { // Send to ALL users, including sender
+          // 🎯 FIXED: Only send translation to OTHER users, not to the speaker
+          if (userSocket && userSocket.userId !== socket.userId) {
+            console.log(`🎯 Sending translation to: ${userSocket.username} (ID: ${userSocket.userId})`);
             userSocket.emit('translated-speech', {
               originalText: cleanedText, // Send cleaned text instead of raw text
               translatedText: translatedText,
@@ -298,9 +301,11 @@ Translation:`;
               fromUsername: username || socket.username, // Use the username from the event
               fromLanguage: socket.userLanguage,
               toUserId: userSocket.userId,
-              toUsername: username || userSocket.username,
+              toUsername: userSocket.username, // FIXED: Use listener's username, not speaker's
               toLanguage: userSocket.userLanguage
             });
+          } else if (userSocket) {
+            console.log(`🎯 Skipping sender: ${userSocket.username} (ID: ${userSocket.userId})`);
           }
         });
       }
