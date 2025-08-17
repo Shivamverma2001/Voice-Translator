@@ -40,7 +40,7 @@ async function cleanTextWithGemini(text, language = 'en') {
   if (!text || !text.trim()) return text;
   
   const languageName = languageNames[language] || 'the user\'s language';
-  console.log(`🔍 Gemini cleaning called for ${languageName} text:`, text);
+  
   
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -48,7 +48,7 @@ async function cleanTextWithGemini(text, language = 'en') {
       return cleanTextBasic(text);
     }
     
-    console.log('✅ GEMINI_API_KEY found, initializing model...');
+    
     const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
     
     const prompt = `A user is writing ${languageName}. Please clean and improve the following text to sound like natural human speech:
@@ -83,11 +83,11 @@ Original text: "${text}"
 
 Return only the cleaned text, with no extra explanations or quotes.`;
 
-    console.log('📤 Sending request to Gemini...');
+    
     const result = await model.generateContent(prompt);
     const cleanedText = result.response.text().trim();
     
-    console.log(`✨ Gemini cleaned text: "${text}" → "${cleanedText}"`);
+    
     return cleanedText;
   } catch (error) {
     console.error('❌ Gemini text cleaning error:', error);
@@ -95,7 +95,7 @@ Return only the cleaned text, with no extra explanations or quotes.`;
     
     // Handle rate limiting specifically
     if (error.status === 429) {
-      console.log('⚠️ Rate limit hit, using basic cleaning as fallback');
+
       return cleanTextBasic(text);
     }
     
@@ -108,7 +108,7 @@ Return only the cleaned text, with no extra explanations or quotes.`;
 function cleanTextBasic(text) {
   if (!text) return text;
   
-  console.log('🔧 Using basic cleaning for:', text);
+  
   
   // Basic spacing fixes
   let cleaned = text
@@ -155,7 +155,7 @@ function cleanTextBasic(text) {
   }
   cleaned = uniqueWords.join(' ');
   
-  console.log('🔧 Basic cleaning result:', cleaned);
+  
   return cleaned;
 }
 
@@ -167,11 +167,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: text and targetLang' });
     }
 
-    console.log(`📝 Manual translation request: "${text}" from ${sourceLang} to ${targetLang}`);
-    
     // First, clean the input text using Gemini AI
     const cleanedText = await cleanTextWithGemini(text, sourceLang);
-    console.log(`✨ Text cleaned: "${text}" → "${cleanedText}"`);
 
     // For manual text, we'll use the free Google Translate service
     // since Speechmatics is for audio transcription, not text translation
@@ -223,10 +220,7 @@ router.post('/', async (req, res) => {
           response.on('data', (chunk) => data += chunk);
           response.on('end', () => {
             try {
-              console.log('📥 Raw Google response (manual):', data);
-              
               const result = JSON.parse(data);
-              console.log('🔍 Parsed result (manual):', JSON.stringify(result, null, 2));
               
               // Handle different response structures
               let translation = '';
@@ -242,7 +236,6 @@ router.post('/', async (req, res) => {
                 throw new Error('Unexpected response structure');
               }
               
-                  console.log(`✨ Manual translation result: "${translation}"`);
     resolve({ translation, cleanedText });
             } catch (error) {
               console.error('❌ Manual parse error:', error);

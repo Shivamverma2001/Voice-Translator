@@ -137,16 +137,14 @@ io.on('connection', (socket) => {
             finalUserLanguage = userSocket.targetLanguage;  // Creator's target becomes joiner's source
             finalTargetLanguage = userSocket.userLanguage;  // Creator's source becomes joiner's target
             
-            console.log(`🔄 Auto-reversing languages for joiner:`);
-            console.log(`👑 Creator languages: ${userSocket.userLanguage} → ${userSocket.targetLanguage}`);
-            console.log(`👤 Joiner languages: ${finalUserLanguage} → ${finalTargetLanguage}`);
+
           }
         });
       }
       
       // If joiner didn't send language preferences (null/undefined), always use the reversed creator languages
       if (!userLanguage || !targetLanguage) {
-        console.log(`🔄 Joiner sent no language preferences, using auto-reversed creator languages`);
+
       }
     }
     
@@ -158,22 +156,9 @@ io.on('connection', (socket) => {
     socket.targetLanguage = finalTargetLanguage;
     socket.isCreator = isCreator;
     
-    console.log(`📞 User joined call room:`);
-    console.log(`👤 Username: ${username}`);
-    console.log(`🆔 User ID: ${userId}`);
-    console.log(`🏠 Room ID: ${roomId}`);
-    console.log(`🌐 Languages: ${finalUserLanguage} ↔ ${finalTargetLanguage}`);
-    console.log(`👑 Call Creator: ${isCreator ? 'Yes' : 'No'}`);
-    if (!isCreator) {
-      console.log(`🔄 Languages auto-reversed from creator's settings`);
-    }
-    console.log(`⏰ Time: ${new Date().toLocaleString()}`);
-    
     // Get all users in the room
     const room = io.sockets.adapter.rooms.get(roomId);
     const userCount = room ? room.size : 1;
-    
-    console.log(`👥 Users in room: ${userCount}`);
     
     // Notify other users in the room about the new user
     socket.to(roomId).emit('user-joined', {
@@ -223,13 +208,7 @@ io.on('connection', (socket) => {
   // Handle real-time speech translation
   socket.on('speech-translation', async (data) => {
     const { text, roomId, username, userLanguage, targetLanguage } = data;
-    console.log(`🗣️ Speech received:`);
-    console.log(`👤 From user: ${username || socket.username}`);
-    console.log(`🆔 User ID: ${socket.userId}`);
-    console.log(`🏠 Room: ${roomId}`);
-    console.log(`📝 Text: "${text}"`);
-    console.log(`🌐 Language: ${userLanguage || socket.userLanguage} → ${targetLanguage || socket.targetLanguage}`);
-    console.log(`⏰ Time: ${new Date().toLocaleString()}`);
+
     
     try {
       // Translate the speech
@@ -264,9 +243,7 @@ Cleaned text:`;
       const cleaningResult = await model.generateContent(cleaningPrompt);
       const cleanedText = cleaningResult.response.text().trim();
       
-      console.log(`🧹 Text cleaning completed:`);
-      console.log(`📝 Raw transcription: "${text}"`);
-      console.log(`✨ Cleaned text: "${cleanedText}"`);
+
       
       // Now translate the cleaned text
       const translationPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text without any additional commentary or formatting:
@@ -278,22 +255,16 @@ Translation:`;
       const translationResult = await model.generateContent(translationPrompt);
       const translatedText = translationResult.response.text().trim();
       
-      console.log(`🌐 Translation completed:`);
-      console.log(`📝 Cleaned text: "${cleanedText}"`);
-      console.log(`🔄 Translated: "${translatedText}"`);
-      console.log(`👤 From user: ${username || socket.username} (event username: ${username}, socket username: ${socket.username})`);
-      console.log(`⏰ Translation time: ${new Date().toLocaleString()}`);
+
       
       // Send cleaned text and translation to ALL users in the room (including sender)
       // This ensures both users see the complete conversation
       const room = io.sockets.adapter.rooms.get(roomId);
       if (room) {
-        console.log(`🎯 Sending translation to other users in room ${roomId}:`);
         room.forEach(socketId => {
           const userSocket = io.sockets.sockets.get(socketId);
           // 🎯 FIXED: Only send translation to OTHER users, not to the speaker
           if (userSocket && userSocket.userId !== socket.userId) {
-            console.log(`🎯 Sending translation to: ${userSocket.username} (ID: ${userSocket.userId})`);
             userSocket.emit('translated-speech', {
               originalText: cleanedText, // Send cleaned text instead of raw text
               translatedText: translatedText,
@@ -304,8 +275,6 @@ Translation:`;
               toUsername: userSocket.username, // FIXED: Use listener's username, not speaker's
               toLanguage: userSocket.userLanguage
             });
-          } else if (userSocket) {
-            console.log(`🎯 Skipping sender: ${userSocket.username} (ID: ${userSocket.userId})`);
           }
         });
       }
@@ -322,11 +291,7 @@ Translation:`;
   // Handle call end
   socket.on('end-call', (data) => {
     const { roomId } = data;
-    console.log(`📞 Call ended by user:`);
-    console.log(`👤 Username: ${socket.username}`);
-    console.log(`🆔 User ID: ${socket.userId}`);
-    console.log(`🏠 Room: ${roomId}`);
-    console.log(`⏰ Time: ${new Date().toLocaleString()}`);
+
     
     // Notify all users in the room that call is ending
     io.to(roomId).emit('call-ended', {
@@ -350,8 +315,7 @@ Translation:`;
     // This ensures the room is "hung up" like a phone call
     io.sockets.adapter.rooms.delete(roomId);
     
-    console.log(`👥 All users disconnected from room: ${roomId}`);
-    console.log(`🚫 Room ${roomId} has been completely removed`);
+
   });
 
   // Check if a room exists
@@ -361,20 +325,15 @@ Translation:`;
     
     // Room exists only if it exists AND has users in it
     if (room && room.size > 0) {
-      console.log(`✅ Room ${roomId} exists with ${room.size} users`);
       callback({ exists: true });
     } else {
-      console.log(`❌ Room ${roomId} does not exist or is empty`);
       callback({ exists: false });
     }
   });
 
   // Handle disconnection
   socket.on('disconnect', () => {
-    console.log('🔌 Client disconnected:', socket.id);
     if (socket.roomId) {
-      console.log(`👤 User ${socket.username} disconnected from room ${socket.roomId}`);
-      
       // Notify other users in the room
       socket.to(socket.roomId).emit('user-left', {
         userId: socket.userId,
@@ -385,7 +344,7 @@ Translation:`;
       const room = io.sockets.adapter.rooms.get(socket.roomId);
       if (room && room.size === 0) {
         io.sockets.adapter.rooms.delete(socket.roomId);
-        console.log(`🚫 Room ${socket.roomId} removed due to being empty`);
+
       }
     }
   });

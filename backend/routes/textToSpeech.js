@@ -107,7 +107,7 @@ router.post('/', async (req, res) => {
 
   try {
     const textChunks = chunkText(text);
-    console.log(`Splitting text into ${textChunks.length} chunks for TTS.`);
+
 
     // Set headers for streaming audio
     res.setHeader('Content-Type', 'audio/mpeg');
@@ -119,7 +119,7 @@ router.post('/', async (req, res) => {
     for (const chunk of textChunks) {
       try {
         const { audio, usedLang } = await getTtsWithFallback(chunk, languageCode);
-        console.log(`TTS ok (requested: ${languageCode}, used: ${usedLang}) for: "${chunk}"`);
+
         passThrough.write(audio);
       } catch (error) {
         console.error(`Skipping a chunk due to TTS error after fallbacks: ${error.message}`);
@@ -128,7 +128,7 @@ router.post('/', async (req, res) => {
     }
 
     passThrough.end();
-    console.log('Finished streaming all TTS chunks.');
+    
 
   } catch (error) {
     console.error('TTS Main Error:', error);

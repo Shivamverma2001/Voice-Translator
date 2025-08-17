@@ -54,35 +54,28 @@ const languages = {
 
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    console.log('🖼️ Image translation request received');
-    console.log('📊 Request body:', req.body);
-    console.log('📊 Request file:', req.file);
+    
     
     if (!req.file) {
-      console.log('❌ No file uploaded');
+
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
     const { targetLang = 'es', sourceLang = 'en' } = req.body;
     
-    console.log('🖼️ Processing image translation request');
-    console.log('📊 Target language:', targetLang);
-    console.log('📊 Source language:', sourceLang);
-    console.log('📊 File size:', req.file.size, 'bytes');
-    console.log('📊 File mimetype:', req.file.mimetype);
-    console.log('📊 File originalname:', req.file.originalname);
+
 
     // Process image with sharp to optimize for OCR
     let processedImageBuffer;
     try {
-      console.log('🔧 Processing image with Sharp...');
+  
       processedImageBuffer = await sharp(req.file.buffer)
         .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality: 85 })
         .toBuffer();
       
-      console.log('✅ Image processed successfully');
-      console.log('📊 Processed image size:', processedImageBuffer.length, 'bytes');
+      
+      
     } catch (sharpError) {
       console.error('❌ Image processing error:', sharpError);
       return res.status(500).json({ error: 'Failed to process image: ' + sharpError.message });
@@ -112,7 +105,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       const response = await result.response;
       extractedText = response.text().trim();
       
-      console.log('✅ Text extracted from image:', extractedText.substring(0, 100) + '...');
+      
       
       if (!extractedText || extractedText === 'No text found') {
         return res.json({
@@ -141,7 +134,7 @@ Cleaned text:`;
       const cleaningResponse = await cleaningResult.response;
       cleanedText = cleaningResponse.text().trim();
       
-      console.log('✅ Text cleaned successfully');
+      
     } catch (cleaningError) {
       console.error('❌ Text cleaning error:', cleaningError);
       // Continue with original text if cleaning fails
@@ -166,7 +159,7 @@ Translation:`;
       const translationResponse = await translationResult.response;
       translatedText = translationResponse.text().trim();
       
-      console.log('✅ Translation completed using Gemini');
+      
     } catch (translationError) {
       console.error('❌ Translation error:', translationError);
       return res.status(500).json({ error: 'Failed to translate text: ' + translationError.message });

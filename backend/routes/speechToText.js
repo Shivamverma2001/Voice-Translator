@@ -25,7 +25,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 async function listModels() {
   const models = await genAI.listModels();
-  console.log(models);
+
 }
 
 router.post('/', upload.single('audio'), async (req, res) => {
@@ -61,7 +61,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
     const audioBuffer = fs.readFileSync(filename);
     const file = new File([audioBuffer], 'recording.wav');
 
-    console.log('Sending file for transcription...');
+
 
     // Transcribe using Speechmatics
     const response = await client.transcribe(
@@ -74,7 +74,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
       'json-v2',
     );
 
-    console.log('Transcription finished!');
+
 
     // Extract the transcript text
     let transcription = '';

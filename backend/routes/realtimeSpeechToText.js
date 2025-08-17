@@ -37,7 +37,7 @@ async function cleanTranscribedTextWithGemini(text, language = 'en') {
   if (!text || !text.trim()) return text;
   
   const languageName = languageNames[language] || 'the user\'s language';
-  console.log(`🔍 Gemini cleaning called for ${languageName} text:`, text);
+  
   
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -45,7 +45,7 @@ async function cleanTranscribedTextWithGemini(text, language = 'en') {
       return cleanTranscribedTextBasic(text);
     }
     
-    console.log('✅ GEMINI_API_KEY found, initializing model...');
+    
     const model = genAI.getGenerativeModel({ model: "models/gemini-1.5-flash-latest" });
     
     const prompt = `A user is speaking ${languageName}. Please clean and improve the following transcribed text to sound like natural human speech:
@@ -80,11 +80,11 @@ Original text: "${text}"
 
 Return only the cleaned text, with no extra explanations or quotes.`;
 
-    console.log('📤 Sending request to Gemini...');
+    
     const result = await model.generateContent(prompt);
     const cleanedText = result.response.text().trim();
     
-    console.log(`✨ Gemini cleaned text: "${text}" → "${cleanedText}"`);
+    
     return cleanedText;
   } catch (error) {
     console.error('❌ Gemini text cleaning error:', error);
@@ -92,7 +92,7 @@ Return only the cleaned text, with no extra explanations or quotes.`;
     
     // Handle rate limiting specifically
     if (error.status === 429) {
-      console.log('⚠️ Rate limit hit, using basic cleaning as fallback');
+
       return cleanTranscribedTextBasic(text);
     }
     
@@ -105,7 +105,7 @@ Return only the cleaned text, with no extra explanations or quotes.`;
 function cleanTranscribedTextBasic(text) {
   if (!text) return text;
   
-  console.log('🔧 Using basic cleaning for:', text);
+  
   
   // Basic spacing fixes
   let cleaned = text
@@ -152,7 +152,7 @@ function cleanTranscribedTextBasic(text) {
   }
   cleaned = uniqueWords.join(' ');
   
-  console.log('🔧 Basic cleaning result:', cleaned);
+  
   return cleaned;
 }
 
@@ -234,7 +234,7 @@ router.post('/start', async (req, res) => {
     const jwt = await fetchJWT();
     const sessionId = Date.now().toString();
     
-    console.log(`Creating new session: ${sessionId}`);
+
     
     // Store session info
     activeSessions.set(sessionId, {
@@ -255,13 +255,13 @@ router.post('/start', async (req, res) => {
           .join(' ');
         // Use basic cleaning for partial transcripts to avoid rate limiting
         session.partialTranscript = cleanTranscribedTextBasic(partialText);
-        console.log(`Session ${sessionId} partial: ${session.partialTranscript}`);
+
       } else if (data.message === 'AddTranscript') {
         const text = data.results.map((r) => r.alternatives?.[0].content).join(' ');
         session.transcript += text;
         // Use basic cleaning for intermediate transcripts to avoid rate limiting
         session.transcript = cleanTranscribedTextBasic(session.transcript);
-        console.log(`Session ${sessionId} transcript: ${text}`);
+
       } else if (data.message === 'EndOfTranscript') {
         console.log(`Session ${sessionId} ended`);
       }
@@ -273,7 +273,7 @@ router.post('/start', async (req, res) => {
     });
 
     session.client.addEventListener('close', () => {
-      console.log(`Session ${sessionId} closed`);
+
     });
     
     // Start the real-time session
@@ -284,8 +284,7 @@ router.post('/start', async (req, res) => {
       },
     });
     
-    console.log(`Session ${sessionId} started successfully`);
-    console.log(`Active sessions: ${Array.from(activeSessions.keys())}`);
+
     
     res.json({ 
       sessionId,
@@ -302,11 +301,7 @@ router.post('/audio', async (req, res) => {
   try {
     const { sessionId, audioData } = req.body;
     
-    console.log(`Audio request for session: ${sessionId}`);
-    console.log(`Active sessions: ${Array.from(activeSessions.keys())}`);
-    
     if (!sessionId || !activeSessions.has(sessionId)) {
-      console.log(`Invalid session ID: ${sessionId}`);
       return res.status(400).json({ 
         error: 'Invalid session ID',
         providedSessionId: sessionId,
@@ -335,21 +330,14 @@ router.post('/stop', async (req, res) => {
   try {
     const { sessionId } = req.body;
     
-    console.log(`Stop request for session: ${sessionId}`);
-    
     if (!sessionId || !activeSessions.has(sessionId)) {
-      console.log(`Invalid session ID for stop: ${sessionId}`);
       return res.status(400).json({ error: 'Invalid session ID' });
     }
     
     const session = activeSessions.get(sessionId);
-    console.log(`Session ${sessionId} found. Current transcript: "${session.transcript}", Partial: "${session.partialTranscript}"`);
-    
     // Stop the session and wait for final transcripts
-    console.log(`Session ${sessionId} stopping recognition...`);
     try {
       await session.client.stopRecognition();
-      console.log(`Session ${sessionId} recognition stopped gracefully.`);
     } catch (err) {
       console.error(`Session ${sessionId} stopRecognition failed (timeout likely): ${err.message}`);
       // Proceeding anyway, using the transcript we have.
@@ -357,12 +345,9 @@ router.post('/stop', async (req, res) => {
     
     // Combine final transcript with the last partial to get the full text
     const fullTranscript = (session.transcript + ' ' + session.partialTranscript).trim();
-    console.log(`Session ${sessionId} full raw transcript: "${fullTranscript}"`);
 
     // Clean the full transcript with Gemini, now with language context
     const finalTranscript = await cleanTranscribedTextWithGemini(fullTranscript, session.languageCode);
-    
-    console.log(`Session ${sessionId} stopped and cleaned up. Final cleaned transcript: "${finalTranscript}"`);
     
     // Clean up session
     activeSessions.delete(sessionId);
