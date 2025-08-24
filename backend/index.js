@@ -205,6 +205,271 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle room creation
+  socket.on('create-room', (data) => {
+    const { roomId, creator, creatorSourceLanguage, creatorTargetLanguage } = data;
+    
+    console.log('🏠 CREATE-ROOM event received:', {
+      roomId,
+      creator,
+      creatorSourceLanguage,
+      creatorTargetLanguage,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Store user info in socket
+      socket.userId = creator;
+      socket.username = creator;
+      socket.userLanguage = creatorSourceLanguage;
+      socket.targetLanguage = creatorTargetLanguage;
+      socket.roomId = roomId;
+      socket.isCreator = true;
+      
+      console.log('✅ User info stored in socket:', {
+        userId: socket.userId,
+        username: socket.username,
+        userLanguage: socket.userLanguage,
+        targetLanguage: socket.targetLanguage,
+        roomId: socket.roomId,
+        isCreator: socket.isCreator
+      });
+      
+      // Join the room
+      socket.join(roomId);
+      console.log('✅ Creator joined room:', roomId);
+      
+      // Emit confirmation back to creator
+      socket.emit('room-created', {
+        roomId,
+        creator,
+        message: 'Room created successfully'
+      });
+      console.log('📤 Emitted room-created event to creator');
+      
+      // Notify other users in the room (if any)
+      socket.to(roomId).emit('user-joined', {
+        userId: creator,
+        username: creator,
+        userLanguage: creatorSourceLanguage,
+        targetLanguage: creatorTargetLanguage
+      });
+      console.log('📤 Emitted user-joined event to other users in room');
+      
+    } catch (error) {
+      console.error('❌ Error in create-room:', error);
+      socket.emit('room-error', { error: 'Failed to create room' });
+    }
+  });
+
+  // Handle room joining
+  socket.on('join-room', async (data) => {
+    const { roomId, joiner, joinerSourceLanguage, joinerTargetLanguage } = data;
+    
+    console.log('🚪 JOIN-ROOM event received:', {
+      roomId,
+      joiner,
+      joinerSourceLanguage,
+      joinerTargetLanguage,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Check if room exists
+      const room = io.sockets.adapter.rooms.get(roomId);
+      if (!room) {
+        console.log('❌ Room does not exist:', roomId);
+        socket.emit('join-error', { error: 'Room does not exist' });
+        return;
+      }
+      
+      // For joiners, we need to reverse the language direction to match the creator
+      let finalUserLanguage = joinerSourceLanguage;
+      let finalTargetLanguage = joinerTargetLanguage;
+      
+      // Find the creator in this room to get their language settings and reverse them
+      console.log('🔍 Looking for creator in room. Room size:', room.size);
+      let creatorFound = false;
+      
+      // Try to find creator with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (!creatorFound && retryCount < maxRetries) {
+        console.log(`🔍 Attempt ${retryCount + 1} to find creator...`);
+        
+        room.forEach(socketId => {
+          const userSocket = io.sockets.sockets.get(socketId);
+          console.log('🔍 Checking socket:', socketId, 'User data:', {
+            userId: userSocket?.userId,
+            username: userSocket?.username,
+            isCreator: userSocket?.isCreator,
+            userLanguage: userSocket?.userLanguage,
+            targetLanguage: userSocket?.targetLanguage
+          });
+          
+          if (userSocket && userSocket.isCreator && userSocket.userLanguage && userSocket.targetLanguage) {
+            creatorFound = true;
+            // Reverse the creator's languages for the joiner
+            finalUserLanguage = userSocket.targetLanguage;  // Creator's target becomes joiner's source
+            finalTargetLanguage = userSocket.userLanguage;  // Creator's source becomes joiner's target
+            console.log('🎯 Language reversal applied for joiner:', {
+              originalJoiner: { source: joinerSourceLanguage, target: joinerTargetLanguage },
+              creatorLanguages: { source: userSocket.userLanguage, target: userSocket.targetLanguage },
+              finalJoiner: { source: finalUserLanguage, target: finalTargetLanguage }
+            });
+          }
+        });
+        
+        if (!creatorFound && retryCount < maxRetries - 1) {
+          console.log('⏳ Creator not found, waiting 100ms before retry...');
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        retryCount++;
+      }
+      
+      if (!creatorFound) {
+        console.log('⚠️ No creator found in room after retries, using original joiner languages');
+      }
+      
+      // Store user info in socket with reversed languages
+      socket.userId = joiner;
+      socket.username = joiner;
+      socket.userLanguage = finalUserLanguage;
+      socket.targetLanguage = finalTargetLanguage;
+      socket.roomId = roomId;
+      socket.isCreator = false;
+      
+      console.log('✅ Joiner info stored in socket:', {
+        userId: socket.userId,
+        username: socket.username,
+        userLanguage: socket.userLanguage,
+        targetLanguage: socket.targetLanguage,
+        roomId: socket.roomId,
+        isCreator: socket.isCreator
+      });
+      
+      // Join the room
+      socket.join(roomId);
+      console.log('✅ Joiner joined room:', roomId);
+      
+      // Emit confirmation back to joiner
+      socket.emit('room-joined', {
+        roomId,
+        joiner,
+        message: 'Joined room successfully'
+      });
+      console.log('📤 Emitted room-joined event to joiner');
+      
+      // Notify other users in the room about the new joiner
+      socket.to(roomId).emit('user-joined', {
+        userId: joiner,
+        username: joiner,
+        userLanguage: finalUserLanguage,
+        targetLanguage: finalTargetLanguage
+      });
+      console.log('📤 Emitted user-joined event to other users in room with reversed languages');
+      
+      // Get existing users in the room and send them to the joiner
+      const existingUsers = [];
+      room.forEach(socketId => {
+        const userSocket = io.sockets.sockets.get(socketId);
+        if (userSocket && userSocket.userId !== joiner) {
+          existingUsers.push({
+            userId: userSocket.userId,
+            username: userSocket.username,
+            userLanguage: userSocket.userLanguage,
+            targetLanguage: userSocket.targetLanguage
+          });
+        }
+      });
+      
+      if (existingUsers.length > 0) {
+        console.log('📤 Sending existing users to joiner:', existingUsers);
+        existingUsers.forEach(existingUser => {
+          socket.emit('user-joined', existingUser);
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in join-room:', error);
+      socket.emit('join-error', { error: 'Failed to join room' });
+    }
+  });
+
+  // Handle text transcription for translation
+  socket.on('transcribe-text', async (data) => {
+    const { roomId, speaker, text, sourceLanguage, targetLanguage } = data;
+    
+    console.log('📝 TRANSCRIBE-TEXT event received:', {
+      roomId,
+      speaker,
+      text,
+      sourceLanguage,
+      targetLanguage,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Translate the transcribed text
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      
+      const languages = {
+        'en': 'English', 'en-US': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+        'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'ja': 'Japanese',
+        'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
+        'sa': 'Sanskrit', 'mr': 'Marathi', 'te': 'Telugu', 'ml': 'Malayalam',
+        'ur': 'Urdu', 'pa': 'Punjabi'
+      };
+      
+      const sourceLang = languages[sourceLanguage] || 'English';
+      const targetLang = languages[targetLanguage] || 'English';
+      
+      // Clean the transcribed text
+      const cleaningPrompt = `Clean and correct the following transcribed text. If it's in English, fix spelling, grammar, and punctuation. If it's in another language, convert it to proper text in that language. Return only the cleaned text:
+
+Text: "${text}"
+
+Cleaned text:`;
+      
+      const cleaningResult = await model.generateContent(cleaningPrompt);
+      const cleanedText = cleaningResult.response.text().trim();
+      console.log('✅ Text cleaned:', { original: text, cleaned: cleanedText });
+      
+      // Translate the cleaned text
+      const translationPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text:
+
+Text: "${cleanedText}"
+
+Translation:`;
+      
+      const translationResult = await model.generateContent(translationPrompt);
+      const translatedText = translationResult.response.text().trim();
+      console.log('✅ Text translated:', { cleaned: cleanedText, translated: translatedText });
+      
+      // Send translation result to all users in the room
+      io.to(roomId).emit('translation-result', {
+        speaker,
+        sourceLanguage,
+        targetLanguage,
+        originalText: text,
+        cleanedText,
+        translatedText
+      });
+      console.log('📤 Emitted translation-result to all users in room');
+      
+    } catch (error) {
+      console.error('❌ Error in transcribe-text:', error);
+      socket.emit('translation-error', { error: 'Translation failed' });
+    }
+  });
+
   // Handle real-time speech translation
   socket.on('speech-translation', async (data) => {
     const { text, roomId, username, userLanguage, targetLanguage } = data;
@@ -288,34 +553,84 @@ Translation:`;
     }
   });
 
+  // Handle room leaving
+  socket.on('leave-room', (data) => {
+    const { roomId, username } = data;
+    
+    console.log('🚪 LEAVE-ROOM event received:', {
+      roomId,
+      username,
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      // Notify other users in the room
+      socket.to(roomId).emit('user-left', {
+        userId: socket.userId || username,
+        username: socket.username || username
+      });
+      console.log('📤 Emitted user-left event to other users in room');
+      
+      // Leave the room
+      socket.leave(roomId);
+      console.log('✅ User left room:', roomId);
+      
+      // Clear room info from socket
+      socket.roomId = null;
+      socket.isCreator = false;
+      console.log('✅ Cleared room info from socket');
+      
+    } catch (error) {
+      console.error('❌ Error in leave-room:', error);
+    }
+  });
+
   // Handle call end
   socket.on('end-call', (data) => {
     const { roomId } = data;
-
     
-    // Notify all users in the room that call is ending
-    io.to(roomId).emit('call-ended', {
+    console.log('📞 END-CALL event received:', {
+      roomId,
       userId: socket.userId,
       username: socket.username,
-      message: `${socket.username} ended the call`
+      socketId: socket.id,
+      timestamp: new Date().toISOString()
     });
     
-    // Disconnect all users from the room
-    const room = io.sockets.adapter.rooms.get(roomId);
-    if (room) {
-      room.forEach(socketId => {
-        const userSocket = io.sockets.sockets.get(socketId);
-        if (userSocket) {
-          userSocket.leave(roomId);
-        }
+    try {
+      // Notify all users in the room that call is ending
+      io.to(roomId).emit('call-ended', {
+        userId: socket.userId,
+        username: socket.username,
+        message: `${socket.username} ended the call`
       });
+      console.log('📤 Emitted call-ended event to all users in room');
+      
+      // Disconnect all users from the room
+      const room = io.sockets.adapter.rooms.get(roomId);
+      if (room) {
+        console.log(`👥 Disconnecting ${room.size} users from room:`, roomId);
+        room.forEach(socketId => {
+          const userSocket = io.sockets.sockets.get(socketId);
+          if (userSocket) {
+            userSocket.leave(roomId);
+            // Clear room info from user socket
+            userSocket.roomId = null;
+            userSocket.isCreator = false;
+            console.log(`✅ Disconnected user ${userSocket.username} from room`);
+          }
+        });
+      }
+      
+      // Completely remove the room so it can't be joined anymore
+      // This ensures the room is "hung up" like a phone call
+      io.sockets.adapter.rooms.delete(roomId);
+      console.log(`🗑️ Room ${roomId} completely removed from server`);
+      
+    } catch (error) {
+      console.error('❌ Error in end-call:', error);
     }
-    
-    // Completely remove the room so it can't be joined anymore
-    // This ensures the room is "hung up" like a phone call
-    io.sockets.adapter.rooms.delete(roomId);
-    
-
   });
 
   // Check if a room exists
