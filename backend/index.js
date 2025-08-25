@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 const express = require('express');
 const http = require('http');
@@ -9,10 +9,10 @@ const { applyCors, createSocketServer } = require('./cors/config');
 const gemini = require('./gemini/gemini');
 const socketConnection = require('./socket');
 const translationService = require('./services/translationService');
+// Clerk will be imported after environment validation
 
 // Import middleware
 const { globalErrorHandler, notFound } = require('./middleware/errorHandler');
-const { apiLimiter, translationLimiter } = require('./middleware/rateLimiter');
 const { securityHeaders, requestLogger, getClientIP } = require('./middleware/security');
 
 if (typeof applyCors !== 'function' || typeof createSocketServer !== 'function') {
@@ -28,7 +28,8 @@ if (!gemini || typeof gemini.getStatus !== 'function') {
 const requiredEnvVars = [
   'SPEECHMATICS_API_KEY',
   'GEMINI_API_KEY', 
-  'MONGODB_URI'
+  'MONGODB_URI',
+  'CLERK_SECRET_KEY'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -37,6 +38,9 @@ for (const envVar of requiredEnvVars) {
     process.exit(1);
   }
 }
+
+// Now import Clerk after environment variables are validated
+const clerk = require('./clerk');
 
 const app = express();
 const server = http.createServer(app);
@@ -58,6 +62,9 @@ socketConnection.initialize(server, io);
 app.get('/', (req, res) => {
   res.redirect('/api');
 });
+
+// Mount Clerk routes at root level for webhook compatibility
+app.use('/clerk', require('./routes/clerk'));
 
 app.use('/api', require('./routes'));
 
@@ -86,6 +93,26 @@ const startServer = async () => {
   try {
     await connectDB();
     
+    // Initialize Clerk integration
+    if (clerk && typeof clerk.initialize === 'function') {
+      console.log('🔐 Initializing Clerk integration...');
+      const clerkInit = clerk.initialize();
+      console.log('🔐 Clerk Authentication: Initialized', {
+        timestamp: new Date().toISOString(),
+        clerkConfig: {
+          hasSecretKey: !!config.clerk.secretKey,
+          hasWebhookSecret: !!config.clerk.webhookSecret,
+          apiUrl: config.clerk.apiUrl
+        }
+      });
+    } else {
+      console.error('❌ Clerk module not properly loaded:', {
+        clerkExists: !!clerk,
+        hasInitializeMethod: clerk && typeof clerk.initialize === 'function',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     server.listen(config.server.port, () => {
       console.log('🚀 Voice Translator Backend Server Started');
       console.log(`📍 Port: ${config.server.port}`);
@@ -93,6 +120,7 @@ const startServer = async () => {
       console.log(`🌍 Host: ${config.server.host}`);
       console.log(`📊 Database: MongoDB Connected`);
       console.log(`🔌 Gemini AI: ${gemini.getStatus()}`);
+      console.log(`🔐 Clerk Authentication: Ready`);
       console.log(`🔗 API: http://${config.server.host}:${config.server.port}/api`);
       console.log(`🛡️ Security: Rate limiting, CORS, Helmet enabled`);
     });

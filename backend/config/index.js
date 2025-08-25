@@ -33,10 +33,16 @@ const config = {
     }
   },
 
+  // Clerk Authentication Configuration
+  clerk: {
+    secretKey: process.env.CLERK_SECRET_KEY,
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    apiUrl: process.env.CLERK_API_URL || 'https://api.clerk.com',
+    webhookSecret: process.env.CLERK_WEBHOOK_SECRET
+  },
+
   // Security Configuration
   security: {
-    jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS) || 12,
     corsOrigins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:3000']
   },
@@ -68,7 +74,7 @@ const requiredEnvVars = [
   'MONGODB_URI',
   'GEMINI_API_KEY',
   'SPEECHMATICS_API_KEY',
-  'JWT_SECRET'
+  'CLERK_SECRET_KEY'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -81,8 +87,9 @@ for (const envVar of requiredEnvVars) {
   if (!config.ai.speechmatics.apiKey && envVar === 'SPEECHMATICS_API_KEY') {
     throw new Error('SPEECHMATICS_API_KEY environment variable is required');
   }
-  if (!config.security.jwtSecret && envVar === 'JWT_SECRET') {
-    throw new Error('JWT_SECRET environment variable is required');
+
+  if (!config.clerk.secretKey && envVar === 'CLERK_SECRET_KEY') {
+    throw new Error('CLERK_SECRET_KEY environment variable is required');
   }
 }
 

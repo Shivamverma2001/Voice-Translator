@@ -5,15 +5,15 @@ const config = require('../config');
 const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
-      fontSrc: ["'self'"],
+      defaultSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
+      imgSrc: ["'self'", "data:", "https:", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
+      connectSrc: ["'self'", "ws:", "wss:", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
+      fontSrc: ["'self'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
+      mediaSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'", "https://*.clerk.com", "https://*.clerk.accounts.dev"]
     }
   },
   hsts: {
@@ -23,7 +23,7 @@ const securityHeaders = helmet({
   },
   noSniff: true,
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  frameguard: { action: 'deny' },
+  frameguard: { action: 'sameorigin' },
   xssFilter: true,
   hidePoweredBy: true
 });
@@ -107,10 +107,6 @@ const requestLogger = (req, res, next) => {
       userAgent: req.get('User-Agent'),
       timestamp: new Date().toISOString()
     };
-    
-    if (config.server.environment === 'development') {
-      console.log('📝 Request:', logData);
-    }
   });
   
   next();
