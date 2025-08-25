@@ -143,6 +143,7 @@ ngrok start --config=ngrok.yml backend frontend
 🌍 Starting ngrok tunnels...
 ✅ Backend:  https://abc123.ngrok-free.app -> http://localhost:5001
 ✅ Frontend: https://xyz789.ngrok-free.app -> http://localhost:3000
+Nginx: ngrok start --config=ngrok.yml backend frontend
 ```
 
 ### Your Public URLs

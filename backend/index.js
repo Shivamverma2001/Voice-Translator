@@ -4,6 +4,9 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 
+// Import database connection
+const { connectDB } = require('./db/connection');
+
 // Check for required environment variables
 if (!process.env.SPEECHMATICS_API_KEY) {
   console.error('SPEECHMATICS_API_KEY environment variable is required');
@@ -12,6 +15,11 @@ if (!process.env.SPEECHMATICS_API_KEY) {
 
 if (!process.env.GEMINI_API_KEY) {
   console.error('GEMINI_API_KEY environment variable is required for intelligent text cleaning');
+  process.exit(1);
+}
+
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is required');
   process.exit(1);
 }
 
@@ -113,10 +121,10 @@ app.use('/api/manual-translate', require('./routes/manualTranslate'));
 app.use('/api/image-translate', require('./routes/imageTranslate'));
 app.use('/api/text-to-speech', require('./routes/textToSpeech'));
 app.use('/api/document-translate', require('./routes/documentTranslate'));
+app.use('/api/languages', require('./routes/languages'));
 
 // WebSocket connection handling for real-time calls
 io.on('connection', (socket) => {
-  console.log('🔌 New client connected:', socket.id);
 
   // Join a call room
   socket.on('join-call', (data) => {
@@ -666,7 +674,27 @@ Translation:`;
 });
 
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Start server only after database connection is established
+const startServer = async () => {
+  try {
+    // Connect to MongoDB first
+    await connectDB();
+    
+    // Start the server
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Database: Connected to MongoDB`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
 
 // Add error handling
 server.on('error', (error) => {
