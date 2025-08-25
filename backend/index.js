@@ -7,6 +7,13 @@ const socketIo = require('socket.io');
 // Import database connection
 const { connectDB } = require('./db/connection');
 
+// Import Gemini AI module
+const gemini = require('./gemini/gemini');
+
+// Log Gemini module status
+console.log('🔌 Gemini AI module loaded successfully');
+console.log('📊 Gemini connection status:', gemini.getStatus());
+
 // Check for required environment variables
 if (!process.env.SPEECHMATICS_API_KEY) {
   console.error('SPEECHMATICS_API_KEY environment variable is required');
@@ -110,9 +117,28 @@ app.get('/', (req, res) => {
       'POST /api/manual-translate': 'Translate text (for manual input)',
       'POST /api/image-translate': 'Extract and translate text from images',
       'POST /api/document-translate': 'Extract and translate text from documents (PDF, DOCX, TXT, Images)',
-      'POST /api/text-to-speech': 'Convert text to speech'
+      'POST /api/text-to-speech': 'Convert text to speech',
+      'GET /api/gemini/status': 'Check Gemini AI connection status'
     }
   });
+});
+
+// Add Gemini status endpoint
+app.get('/api/gemini/status', async (req, res) => {
+  try {
+    const status = gemini.getStatus();
+    const testResult = await gemini.testConnection();
+    res.json({ 
+      status, 
+      testResult,
+      message: 'Gemini AI module status retrieved successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      error: error.message,
+      message: 'Failed to retrieve Gemini AI status'
+    });
+  }
 });
 app.use('/api/speech-to-text', require('./routes/speechToText'));
 app.use('/api/realtime-speech-to-text', require('./routes/realtimeSpeechToText'));
@@ -423,54 +449,26 @@ io.on('connection', (socket) => {
     });
     
     try {
-      // Translate the transcribed text
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      // Use the new Gemini module for text cleaning and translation
+      const result = await gemini.speechTranslation(text, sourceLanguage, targetLanguage);
       
-      const languages = {
-        'en': 'English', 'en-US': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-        'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'ja': 'Japanese',
-        'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
-        'sa': 'Sanskrit', 'mr': 'Marathi', 'te': 'Telugu', 'ml': 'Malayalam',
-        'ur': 'Urdu', 'pa': 'Punjabi'
-      };
-      
-      const sourceLang = languages[sourceLanguage] || 'English';
-      const targetLang = languages[targetLanguage] || 'English';
-      
-      // Clean the transcribed text
-      const cleaningPrompt = `Clean and correct the following transcribed text. If it's in English, fix spelling, grammar, and punctuation. If it's in another language, convert it to proper text in that language. Return only the cleaned text:
-
-Text: "${text}"
-
-Cleaned text:`;
-      
-      const cleaningResult = await model.generateContent(cleaningPrompt);
-      const cleanedText = cleaningResult.response.text().trim();
-      console.log('✅ Text cleaned:', { original: text, cleaned: cleanedText });
-      
-      // Translate the cleaned text
-      const translationPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text:
-
-Text: "${cleanedText}"
-
-Translation:`;
-      
-      const translationResult = await model.generateContent(translationPrompt);
-      const translatedText = translationResult.response.text().trim();
-      console.log('✅ Text translated:', { cleaned: cleanedText, translated: translatedText });
-      
-      // Send translation result to all users in the room
-      io.to(roomId).emit('translation-result', {
-        speaker,
-        sourceLanguage,
-        targetLanguage,
-        originalText: text,
-        cleanedText,
-        translatedText
-      });
-      console.log('📤 Emitted translation-result to all users in room');
+      if (result.success) {
+        const { cleanedText, translatedText } = result;
+        console.log('✅ Text processed:', { original: text, cleaned: cleanedText, translated: translatedText });
+        
+        // Send translation result to all users in the room
+        io.to(roomId).emit('translation-result', {
+          speaker,
+          sourceLanguage,
+          targetLanguage,
+          originalText: text,
+          cleanedText,
+          translatedText
+        });
+        console.log('📤 Emitted translation-result to all users in room');
+      } else {
+        throw new Error(result.error);
+      }
       
     } catch (error) {
       console.error('❌ Error in transcribe-text:', error);
@@ -482,74 +480,40 @@ Translation:`;
   socket.on('speech-translation', async (data) => {
     const { text, roomId, username, userLanguage, targetLanguage } = data;
 
-    
     try {
-      // Translate the speech
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      // Use the new Gemini module for speech translation
+      const result = await gemini.speechTranslation(
+        text, 
+        userLanguage || socket.userLanguage, 
+        targetLanguage || socket.targetLanguage
+      );
       
-      const languages = {
-        'en': 'English', 'en-US': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
-        'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'ja': 'Japanese',
-        'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
-        'sa': 'Sanskrit', 'mr': 'Marathi', 'te': 'Telugu', 'ml': 'Malayalam',
-        'ur': 'Urdu', 'pa': 'Punjabi'
-      };
-      
-      // Normalize language codes
-      const normalizeLang = (lang) => {
-        if (lang === 'en-US') return 'en';
-        return lang;
-      };
-      
-      const sourceLang = languages[userLanguage || socket.userLanguage] || 'English';
-      const targetLang = languages[targetLanguage || socket.targetLanguage] || 'English';
-      
-      // First, clean the transcribed text using Gemini
-      const cleaningPrompt = `Clean and correct the following transcribed text. If it's in English, fix spelling, grammar, and punctuation. If it's in another language (like Hindi, Spanish, etc.), convert it to proper text in that language. Return only the cleaned text without any additional commentary:
-
-Text: "${text}"
-
-Cleaned text:`;
-      
-      const cleaningResult = await model.generateContent(cleaningPrompt);
-      const cleanedText = cleaningResult.response.text().trim();
-      
-
-      
-      // Now translate the cleaned text
-      const translationPrompt = `Translate the following text from ${sourceLang} to ${targetLang}. Return only the translated text without any additional commentary or formatting:
-
-Text: "${cleanedText}"
-
-Translation:`;
-      
-      const translationResult = await model.generateContent(translationPrompt);
-      const translatedText = translationResult.response.text().trim();
-      
-
-      
-      // Send cleaned text and translation to ALL users in the room (including sender)
-      // This ensures both users see the complete conversation
-      const room = io.sockets.adapter.rooms.get(roomId);
-      if (room) {
-        room.forEach(socketId => {
-          const userSocket = io.sockets.sockets.get(socketId);
-          // 🎯 FIXED: Only send translation to OTHER users, not to the speaker
-          if (userSocket && userSocket.userId !== socket.userId) {
-            userSocket.emit('translated-speech', {
-              originalText: cleanedText, // Send cleaned text instead of raw text
-              translatedText: translatedText,
-              fromUserId: socket.userId,
-              fromUsername: username || socket.username, // Use the username from the event
-              fromLanguage: socket.userLanguage,
-              toUserId: userSocket.userId,
-              toUsername: userSocket.username, // FIXED: Use listener's username, not speaker's
-              toLanguage: userSocket.userLanguage
-            });
-          }
-        });
+      if (result.success) {
+        const { cleanedText, translatedText } = result;
+        
+        // Send cleaned text and translation to ALL users in the room (including sender)
+        // This ensures both users see the complete conversation
+        const room = io.sockets.adapter.rooms.get(roomId);
+        if (room) {
+          room.forEach(socketId => {
+            const userSocket = io.sockets.sockets.get(socketId);
+            // 🎯 FIXED: Only send translation to OTHER users, not to the speaker
+            if (userSocket && userSocket.userId !== socket.userId) {
+              userSocket.emit('translated-speech', {
+                originalText: cleanedText, // Send cleaned text instead of raw text
+                translatedText: translatedText,
+                fromUserId: socket.userId,
+                fromUsername: username || socket.username, // Use the username from the event
+                fromLanguage: socket.userLanguage,
+                toUserId: userSocket.userId,
+                toUsername: userSocket.username, // FIXED: Use listener's username, not speaker's
+                toLanguage: userSocket.userLanguage
+              });
+            }
+          });
+        }
+      } else {
+        throw new Error(result.error);
       }
       
     } catch (error) {
