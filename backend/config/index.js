@@ -33,12 +33,11 @@ const config = {
     }
   },
 
-  // Clerk Authentication Configuration
-  clerk: {
-    secretKey: process.env.CLERK_SECRET_KEY,
-    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
-    apiUrl: process.env.CLERK_API_URL || 'https://api.clerk.com',
-    webhookSecret: process.env.CLERK_WEBHOOK_SECRET
+  // Firebase Authentication Configuration
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    serviceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+    databaseURL: process.env.FIREBASE_DATABASE_URL
   },
 
   // Security Configuration
@@ -73,8 +72,7 @@ const config = {
 const requiredEnvVars = [
   'MONGODB_URI',
   'GEMINI_API_KEY',
-  'SPEECHMATICS_API_KEY',
-  'CLERK_SECRET_KEY'
+  'SPEECHMATICS_API_KEY'
 ];
 
 for (const envVar of requiredEnvVars) {
@@ -87,10 +85,12 @@ for (const envVar of requiredEnvVars) {
   if (!config.ai.speechmatics.apiKey && envVar === 'SPEECHMATICS_API_KEY') {
     throw new Error('SPEECHMATICS_API_KEY environment variable is required');
   }
+}
 
-  if (!config.clerk.secretKey && envVar === 'CLERK_SECRET_KEY') {
-    throw new Error('CLERK_SECRET_KEY environment variable is required');
-  }
+// Firebase validation (optional but recommended)
+if (!process.env.FIREBASE_PROJECT_ID && !process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  console.warn('⚠️ Firebase configuration not found. Authentication will not work.');
+  console.warn('   Please set FIREBASE_PROJECT_ID or FIREBASE_SERVICE_ACCOUNT_KEY');
 }
 
 module.exports = config;

@@ -15,7 +15,7 @@ const textToSpeechRoutes = require('./textToSpeech');
 const documentTranslateRoutes = require('./documentTranslate');
 const languageRoutes = require('./languages');
 const roomRoutes = require('./rooms');
-const clerkRoutes = require('./clerk');
+const firebaseAuthRoutes = require('./firebaseAuth');
 const userRoutes = require('./users');
 
 // Apply rate limiting to specific routes
@@ -29,7 +29,7 @@ router.use('/text-to-speech', translationLimiter, textToSpeechRoutes);
 router.use('/document-translate', uploadLimiter, documentTranslateRoutes);
 router.use('/languages', apiLimiter, languageRoutes);
 router.use('/rooms', apiLimiter, roomRoutes);
-router.use('/clerk', apiLimiter, clerkRoutes);
+router.use('/firebase-auth', apiLimiter, firebaseAuthRoutes);
 router.use('/users', apiLimiter, userRoutes);
 
 module.exports = router;

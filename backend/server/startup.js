@@ -1,9 +1,9 @@
 // Server Startup Configuration
-// This file centralizes server startup logic and Clerk initialization
+// This file centralizes server startup logic and Firebase initialization
 
 const config = require('../config');
 const { connectDB } = require('../db/connection');
-const clerk = require('../clerk');
+const { initializeFirebase } = require('../config/firebase');
 
 /**
  * Start the server with all required initializations
@@ -15,24 +15,20 @@ const startServer = async (server, gemini) => {
     // Connect to database
     await connectDB();
     
-    // Initialize Clerk integration
-    if (clerk && typeof clerk.initialize === 'function') {
-      console.log('🔐 Initializing Clerk integration...');
-      const clerkInit = clerk.initialize();
-      console.log('🔐 Clerk Authentication: Initialized', {
+    // Initialize Firebase integration
+    try {
+      console.log('🔐 Initializing Firebase integration...');
+      initializeFirebase();
+      console.log('🔐 Firebase Authentication: Initialized', {
         timestamp: new Date().toISOString(),
-        clerkConfig: {
-          hasSecretKey: !!config.clerk.secretKey,
-          hasWebhookSecret: !!config.clerk.webhookSecret,
-          apiUrl: config.clerk.apiUrl
+        firebaseConfig: {
+          hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+          hasServiceAccount: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY
         }
       });
-    } else {
-      console.error('❌ Clerk module not properly loaded:', {
-        clerkExists: !!clerk,
-        hasInitializeMethod: clerk && typeof clerk.initialize === 'function',
-        timestamp: new Date().toISOString()
-      });
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      // Don't exit - Firebase might not be critical for basic functionality
     }
     
     // Start listening
@@ -43,7 +39,7 @@ const startServer = async (server, gemini) => {
       console.log(`🌍 Host: ${config.server.host}`);
       console.log(`📊 Database: MongoDB Connected`);
       console.log(`🔌 Gemini AI: ${gemini.getStatus()}`);
-      console.log(`🔐 Clerk Authentication: Ready`);
+      console.log(`🔐 Firebase Authentication: Ready`);
       console.log(`🔗 API: http://${config.server.host}:${config.server.port}/api`);
       console.log(`🛡️ Security: Rate limiting, CORS, Helmet enabled`);
     });

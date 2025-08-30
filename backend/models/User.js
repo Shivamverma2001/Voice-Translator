@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  // Clerk Integration
-  clerkId: {
+  // Firebase Integration
+  firebaseUid: {
     type: String,
     unique: true,
-    sparse: true, // Allow null values for non-Clerk users
+    sparse: true, // Allow null values for non-Firebase users
     trim: true
   },
-  isClerkUser: {
+  isFirebaseUser: {
     type: Boolean,
     default: false
   },
@@ -18,11 +18,11 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: function() {
-      // Username is required only for non-Clerk users
-      return !this.isClerkUser;
+      // Username is required only for non-Firebase users
+      return !this.isFirebaseUser;
     },
     unique: true,
-    sparse: true, // Allow null values for Clerk users
+    sparse: true, // Allow null values for Firebase users
     trim: true,
     minlength: [3, 'Username must be at least 3 characters long'],
     maxlength: [30, 'Username cannot exceed 30 characters'],
@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: function() {
-      // Email is required for all users (both Clerk and non-Clerk)
+      // Email is required for all users (both Firebase and non-Firebase)
       return true;
     },
     unique: true,
@@ -43,8 +43,8 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: function() {
-      // Password is required only for non-Clerk users
-      return !this.isClerkUser;
+      // Password is required only for non-Firebase users
+      return !this.isFirebaseUser;
     },
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
@@ -52,8 +52,8 @@ const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: function() {
-      // First name is required for Clerk users
-      return this.isClerkUser;
+      // First name is required for Firebase users
+      return this.isFirebaseUser;
     },
     trim: true,
     maxlength: [50, 'First name cannot exceed 50 characters']
@@ -61,8 +61,8 @@ const userSchema = new mongoose.Schema({
   lastName: {
     type: String,
     required: function() {
-      // Last name is required for Clerk users
-      return this.isClerkUser;
+      // Last name is required for Firebase users
+      return this.isFirebaseUser;
     },
     trim: true,
     maxlength: [50, 'Last name cannot exceed 50 characters']
@@ -145,15 +145,21 @@ const userSchema = new mongoose.Schema({
     facebook: String
   },
   
-  // Clerk Integration Metadata
-  clerkMetadata: {
+  // Firebase Integration Metadata
+  firebaseMetadata: {
     lastSync: Date,
-    clerkData: {
-      id: String,
-      createdAt: Date,
-      updatedAt: Date,
-      imageUrl: String,
-      externalId: String
+    firebaseData: {
+      uid: String,
+      emailVerified: Boolean,
+      displayName: String,
+      photoURL: String,
+      providerData: [{
+        providerId: String,
+        uid: String,
+        displayName: String,
+        email: String,
+        photoURL: String
+      }]
     }
   }
 }, {
@@ -191,26 +197,26 @@ userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ createdAt: 1 });
 
-// Pre-save middleware to handle Clerk users
+// Pre-save middleware to handle Firebase users
 userSchema.pre('save', async function(next) {
   try {
     console.log('💾 User model pre-save middleware:', {
       isNew: this.isNew,
       isModified: this.modifiedPaths(),
-      isClerkUser: this.isClerkUser,
+      isFirebaseUser: this.isFirebaseUser,
       email: this.email,
-      clerkId: this.clerkId,
+      firebaseUid: this.firebaseUid,
       timestamp: new Date().toISOString()
     });
 
-    // For Clerk users, ensure password is null
-    if (this.isClerkUser) {
+    // For Firebase users, ensure password is null
+    if (this.isFirebaseUser) {
       this.password = null;
-      console.log('🔐 Clerk user: password set to null');
+      console.log('🔐 Firebase user: password set to null');
     } else {
-      // Only hash the password if it has been modified (or is new) for non-Clerk users
+      // Only hash the password if it has been modified (or is new) for non-Firebase users
       if (!this.isModified('password')) {
-        console.log('🔐 Non-Clerk user: password not modified, skipping hash');
+        console.log('🔐 Non-Firebase user: password not modified, skipping hash');
         return next();
       }
 
@@ -218,7 +224,7 @@ userSchema.pre('save', async function(next) {
         // Hash password with cost of 12
         const hashedPassword = await bcrypt.hash(this.password, 12);
         this.password = hashedPassword;
-        console.log('🔐 Non-Clerk user: password hashed successfully');
+        console.log('🔐 Non-Firebase user: password hashed successfully');
         next();
       } catch (error) {
         console.error('❌ Password hashing error:', error);
@@ -241,8 +247,8 @@ userSchema.post('save', function(doc, next) {
     console.log('✅ User saved successfully:', {
       userId: doc._id,
       email: doc.email,
-      clerkId: doc.clerkId,
-      isClerkUser: doc.isClerkUser,
+      firebaseUid: doc.firebaseUid,
+      isFirebaseUser: doc.isFirebaseUser,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       timestamp: new Date().toISOString()

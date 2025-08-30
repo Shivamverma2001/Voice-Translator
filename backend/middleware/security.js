@@ -13,14 +13,14 @@ const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "data:", "blob:"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
-      imgSrc: ["'self'", "data:", "https:", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
-      connectSrc: ["'self'", "ws:", "wss:", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
-      fontSrc: ["'self'", "https://*.clerk.com", "https://*.clerk.accounts.dev"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.firebaseapp.com", "https://*.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.firebaseapp.com", "https://*.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "https://*.firebaseapp.com", "https://*.googleapis.com"],
+      connectSrc: ["'self'", "ws:", "wss:", "https://*.firebaseapp.com", "https://*.googleapis.com"],
+      fontSrc: ["'self'", "https://*.firebaseapp.com", "https://*.googleapis.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'", "blob:"],
-      frameSrc: ["'self'", "https://*.clerk.com", "https://*.clerk.accounts.dev"]
+      frameSrc: ["'self'", "https://*.firebaseapp.com", "https://*.googleapis.com"]
     }
   },
   hsts: {

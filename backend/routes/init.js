@@ -6,8 +6,7 @@
  * @param {Express} app - Express app instance
  */
 const initializeRoutes = (app) => {
-  // Mount Clerk routes at root level for webhook compatibility
-  app.use('/clerk', require('./clerk'));
+  // Firebase authentication routes are mounted in the main API router
 
   // Mount API routes
   app.use('/api', require('./index'));
