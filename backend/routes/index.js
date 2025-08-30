@@ -16,6 +16,7 @@ const documentTranslateRoutes = require('./documentTranslate');
 const languageRoutes = require('./languages');
 const roomRoutes = require('./rooms');
 const clerkRoutes = require('./clerk');
+const userRoutes = require('./users');
 
 // Apply rate limiting to specific routes
 router.use('/', apiLimiter, apiRoutes); // API overview and status endpoints
@@ -29,5 +30,6 @@ router.use('/document-translate', uploadLimiter, documentTranslateRoutes);
 router.use('/languages', apiLimiter, languageRoutes);
 router.use('/rooms', apiLimiter, roomRoutes);
 router.use('/clerk', apiLimiter, clerkRoutes);
+router.use('/users', apiLimiter, userRoutes);
 
 module.exports = router;

@@ -20,6 +20,8 @@ class SocketConnection {
       
       // Basic connection logging (minimal)
       this.io.on('connection', (socket) => {
+        socket.connectedAt = new Date();
+        
         // Only log in development
         if (process.env.NODE_ENV === 'development') {
           console.log('🔌 Client connected:', socket.id);
@@ -30,6 +32,17 @@ class SocketConnection {
           if (process.env.NODE_ENV === 'development') {
             console.log('🔌 Client disconnected:', socket.id);
           }
+        });
+
+        // Handle translation events
+        socket.on('transcribe-text', (data) => {
+          const translationService = require('../services/translationService');
+          translationService.handleTranscribeText(socket, data);
+        });
+
+        socket.on('speech-translation', (data) => {
+          const translationService = require('../services/translationService');
+          translationService.handleSpeechTranslation(socket, data);
         });
       });
 

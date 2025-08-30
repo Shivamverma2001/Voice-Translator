@@ -1,72 +1,36 @@
 require('dotenv').config({ path: '../.env' });
 
 const express = require('express');
-const http = require('http');
 
 const config = require('./config');
-const { connectDB } = require('./db/connection');
-const { applyCors, createSocketServer } = require('./cors/config');
 const gemini = require('./gemini/gemini');
-const socketConnection = require('./socket');
-const translationService = require('./services/translationService');
-// Clerk will be imported after environment validation
 
-// Import middleware
+// Import initialization modules
+const { initializeMiddleware } = require('./middleware/init');
+const { initializeRoutes } = require('./routes/init');
+const { initializeServer } = require('./server/init');
+const { startServer } = require('./server/startup');
+
+// Import error handling middleware
 const { globalErrorHandler, notFound } = require('./middleware/errorHandler');
-const { securityHeaders, requestLogger, getClientIP } = require('./middleware/security');
-
-if (typeof applyCors !== 'function' || typeof createSocketServer !== 'function') {
-  console.error('❌ Failed to load CORS module properly');
-  process.exit(1);
-}
 
 if (!gemini || typeof gemini.getStatus !== 'function') {
   console.error('❌ Failed to load Gemini AI module properly');
   process.exit(1);
 }
 
-const requiredEnvVars = [
-  'SPEECHMATICS_API_KEY',
-  'GEMINI_API_KEY', 
-  'MONGODB_URI',
-  'CLERK_SECRET_KEY'
-];
-
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`${envVar} environment variable is required`);
-    process.exit(1);
-  }
-}
-
-// Now import Clerk after environment variables are validated
-const clerk = require('./clerk');
+// Environment variables are validated in the startup process
 
 const app = express();
-const server = http.createServer(app);
 
-// Apply security middleware
-app.use(securityHeaders);
-app.use(getClientIP);
-app.use(requestLogger);
+// Initialize all middleware
+initializeMiddleware(app, config);
 
-// Apply CORS and parsing
-applyCors(app);
-app.use(express.json({ limit: config.upload.maxFileSize }));
+// Initialize server and Socket.IO
+const { server, io } = initializeServer(app);
 
-// Rate limiting is handled in individual route files
-
-const io = createSocketServer(server);
-socketConnection.initialize(server, io);
-
-app.get('/', (req, res) => {
-  res.redirect('/api');
-});
-
-// Mount Clerk routes at root level for webhook compatibility
-app.use('/clerk', require('./routes/clerk'));
-
-app.use('/api', require('./routes'));
+// Initialize all routes
+initializeRoutes(app);
 
 // 404 handler - must be after all routes
 app.use(notFound);
@@ -74,61 +38,10 @@ app.use(notFound);
 // Global error handler - must be last
 app.use(globalErrorHandler);
 
-io.on('connection', (socket) => {
-  socket.connectedAt = new Date();
-  
-  socket.on('disconnect', () => {
-  });
+// Socket events are now handled in socket/connection.js
 
-  socket.on('transcribe-text', (data) => {
-    translationService.handleTranscribeText(socket, data);
-  });
-
-  socket.on('speech-translation', (data) => {
-    translationService.handleSpeechTranslation(socket, data);
-  });
-});
-
-const startServer = async () => {
-  try {
-    await connectDB();
-    
-    // Initialize Clerk integration
-    if (clerk && typeof clerk.initialize === 'function') {
-      console.log('🔐 Initializing Clerk integration...');
-      const clerkInit = clerk.initialize();
-      console.log('🔐 Clerk Authentication: Initialized', {
-        timestamp: new Date().toISOString(),
-        clerkConfig: {
-          hasSecretKey: !!config.clerk.secretKey,
-          hasWebhookSecret: !!config.clerk.webhookSecret,
-          apiUrl: config.clerk.apiUrl
-        }
-      });
-    } else {
-      console.error('❌ Clerk module not properly loaded:', {
-        clerkExists: !!clerk,
-        hasInitializeMethod: clerk && typeof clerk.initialize === 'function',
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    server.listen(config.server.port, () => {
-      console.log('🚀 Voice Translator Backend Server Started');
-      console.log(`📍 Port: ${config.server.port}`);
-      console.log(`🌐 Environment: ${config.server.environment}`);
-      console.log(`🌍 Host: ${config.server.host}`);
-      console.log(`📊 Database: MongoDB Connected`);
-      console.log(`🔌 Gemini AI: ${gemini.getStatus()}`);
-      console.log(`🔐 Clerk Authentication: Ready`);
-      console.log(`🔗 API: http://${config.server.host}:${config.server.port}/api`);
-      console.log(`🛡️ Security: Rate limiting, CORS, Helmet enabled`);
-    });
-    } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
+// Start the server
+startServer(server, gemini);
 
 server.on('error', (error) => {
   console.error('❌ Server error:', error);
@@ -143,5 +56,3 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
   process.exit(1);
 });
-
-startServer();

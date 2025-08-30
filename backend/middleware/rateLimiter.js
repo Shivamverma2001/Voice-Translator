@@ -14,6 +14,16 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Custom key generator to handle proxy headers properly
+  keyGenerator: (req) => {
+    // Use X-Forwarded-For header if available (from ngrok), otherwise fallback to IP
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection.remoteAddress;
+  },
+  // Skip rate limiting for certain conditions
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health' || req.path === '/api/health';
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -40,6 +50,10 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Custom key generator to handle proxy headers properly
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection.remoteAddress;
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -66,6 +80,10 @@ const uploadLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Custom key generator to handle proxy headers properly
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection.remoteAddress;
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -92,6 +110,10 @@ const translationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Custom key generator to handle proxy headers properly
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection.remoteAddress;
+  },
   handler: (req, res) => {
     res.status(429).json({
       success: false,

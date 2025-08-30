@@ -1,6 +1,13 @@
 const helmet = require('helmet');
 const config = require('../config');
 
+// Trust proxy configuration for reverse proxies (ngrok, etc.)
+const trustProxy = (req, res, next) => {
+  // This middleware ensures Express trusts proxy headers
+  // Needed for rate limiting to work properly with ngrok
+  next();
+};
+
 // Security headers configuration
 const securityHeaders = helmet({
   contentSecurityPolicy: {
@@ -28,23 +35,7 @@ const securityHeaders = helmet({
   hidePoweredBy: true
 });
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (config.security.corsOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-};
+// CORS configuration moved to dedicated cors/config.js file
 
 // Request size limiter
 const requestSizeLimit = (req, res, next) => {
@@ -114,9 +105,9 @@ const requestLogger = (req, res, next) => {
 
 module.exports = {
   securityHeaders,
-  corsOptions,
   requestSizeLimit,
   validateFileType,
   getClientIP,
-  requestLogger
+  requestLogger,
+  trustProxy
 };

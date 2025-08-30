@@ -581,6 +581,134 @@ class UserService {
       throw new Error(`Failed to get global statistics: ${error.message}`);
     }
   }
+
+  // Clerk Integration Methods
+  async getUserByClerkId(clerkId) {
+    try {
+      const user = await User.findOne({ clerkId });
+      return user;
+    } catch (error) {
+      throw new Error(`Failed to get user by Clerk ID: ${error.message}`);
+    }
+  }
+
+  // Get user additional fields
+  async getUserAdditionalFields(clerkId) {
+    try {
+      const user = await User.findOne({ clerkId }).select('country state age gender preferredLanguage settings');
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      return user;
+    } catch (error) {
+      throw new Error(`Failed to get user additional fields: ${error.message}`);
+    }
+  }
+
+  // Update user additional fields
+  async updateUserAdditionalFields(clerkId, fieldsData) {
+    try {
+      const { country, state, age, gender, preferredLanguage, theme } = fieldsData;
+      
+      const user = await User.findOne({ clerkId });
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Update the fields
+      user.country = country || '';
+      user.state = state || '';
+      user.age = age ? parseInt(age) : null;
+      user.gender = gender || 'prefer-not-to-say';
+      user.preferredLanguage = preferredLanguage || 'en';
+      
+      // Update settings.theme
+      if (!user.settings) {
+        user.settings = {};
+      }
+      user.settings.theme = theme || 'light';
+
+      await user.save();
+
+      return {
+        country: user.country,
+        state: user.state,
+        age: user.age,
+        gender: user.gender,
+        preferredLanguage: user.preferredLanguage,
+        settings: user.settings
+      };
+    } catch (error) {
+      throw new Error(`Failed to update user additional fields: ${error.message}`);
+    }
+  }
+
+  // Update Clerk profile data
+  async updateClerkProfileData(clerkId, clerkData) {
+    try {
+      const user = await User.findOne({ clerkId });
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Initialize clerkMetadata if it doesn't exist
+      if (!user.clerkMetadata) {
+        user.clerkMetadata = {};
+      }
+      if (!user.clerkMetadata.clerkData) {
+        user.clerkMetadata.clerkData = {};
+      }
+
+      // Dynamically update any fields that are provided
+      Object.entries(clerkData).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          // Update main user fields
+          if (['firstName', 'lastName', 'username', 'email'].includes(key)) {
+            user[key] = value;
+          }
+          
+          // Handle special field mappings
+          if (key === 'imageUrl') {
+            user.avatar = value;
+          }
+          
+          // Update clerkMetadata.clerkData
+          user.clerkMetadata.clerkData[key] = value;
+        }
+      });
+      
+      // Update timestamps
+      user.clerkMetadata.lastSync = new Date();
+      user.clerkMetadata.clerkData.updatedAt = new Date();
+
+      await user.save();
+
+      return {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        clerkMetadata: user.clerkMetadata
+      };
+    } catch (error) {
+      throw new Error(`Failed to update Clerk profile data: ${error.message}`);
+    }
+  }
+
+  // Debug: Get all users (for troubleshooting)
+  async getAllUsersForDebug() {
+    try {
+      const users = await User.find({}, 'clerkId email firstName lastName isClerkUser');
+      return users;
+    } catch (error) {
+      throw new Error(`Failed to get all users: ${error.message}`);
+    }
+  }
 }
 
 module.exports = new UserService();
