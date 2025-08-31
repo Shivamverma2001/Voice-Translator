@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getLanguageByCode } = require('../master/languages');
-const { updateFirebaseUserProfile } = require('../config/firebase');
+const { updateFirebaseUserProfile, disableFirebaseUser } = require('../config/firebase');
 
 class UserService {
   // User Registration
@@ -602,6 +602,52 @@ class UserService {
       return { message: 'Account deleted successfully' };
     } catch (error) {
       throw new Error(`Failed to delete account: ${error.message}`);
+    }
+  }
+
+  // Soft Delete User Account (set isActive to false and disable Firebase)
+  async softDeleteUserAccount(firebaseUid) {
+    try {
+      // Find user by Firebase UID
+      const user = await User.findOne({ firebaseUid });
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Check if user is already deactivated
+      if (!user.isActive) {
+        throw new Error('User account is already deactivated');
+      }
+
+      // Update MongoDB: set isActive to false and add deactivation timestamp
+      const updatedUser = await User.findOneAndUpdate(
+        { firebaseUid },
+        { 
+          isActive: false,
+          deactivatedAt: new Date(),
+          'firebaseMetadata.lastSync': new Date()
+        },
+        { new: true }
+      );
+
+      // Disable Firebase user account
+      try {
+        await disableFirebaseUser(firebaseUid);
+        console.log('✅ Firebase user account disabled successfully');
+      } catch (firebaseError) {
+        console.error('⚠️ Firebase user disable failed, but MongoDB updated:', firebaseError);
+        // Don't fail the entire operation if Firebase update fails
+        // MongoDB update was successful
+      }
+
+      return { 
+        success: true,
+        message: 'Account deactivated successfully',
+        user: updatedUser
+      };
+    } catch (error) {
+      throw new Error(`Failed to deactivate account: ${error.message}`);
     }
   }
 

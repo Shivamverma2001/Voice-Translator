@@ -90,6 +90,38 @@ class UserController {
     }
   }
 
+  // Soft delete user account
+  async softDeleteUserAccount(req, res) {
+    try {
+      // Get Firebase UID from the authenticated request
+      const firebaseUid = req.user?.firebaseUid;
+
+      if (!firebaseUid) {
+        return res.status(401).json({ 
+          success: false,
+          message: 'Firebase UID not found in request' 
+        });
+      }
+
+      console.log('Soft deleting account for Firebase UID:', firebaseUid);
+
+      // Soft delete user account via service
+      const result = await userService.softDeleteUserAccount(firebaseUid);
+      
+      res.json({ 
+        success: true,
+        message: 'Account deactivated successfully',
+        user: result.user
+      });
+    } catch (error) {
+      console.error('Error soft deleting user account:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
   // Debug endpoint to check if user exists
   async debugUser(req, res) {
     try {

@@ -9,6 +9,9 @@ router.get('/profile', authenticateFirebaseToken, userController.getUserProfile)
 // Update user profile by Firebase UID
 router.put('/profile', authenticateFirebaseToken, userController.updateUserProfile);
 
+// Soft delete user account
+router.delete('/profile', authenticateFirebaseToken, userController.softDeleteUserAccount);
+
 // Debug endpoint to check if user exists
 router.get('/debug/user/:firebaseUid', userController.debugUser);
 

@@ -94,6 +94,14 @@ const authenticateFirebaseToken = async (req, res, next) => {
         console.log('✅ Firebase user updated in MongoDB:', user._id);
       }
 
+      // Check if MongoDB user is active
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          error: 'User account is deactivated'
+        });
+      }
+
       // Add user info to request
       req.user = {
         id: user._id,
@@ -143,7 +151,7 @@ const optionalFirebaseAuth = async (req, res, next) => {
       if (firebaseUser && !firebaseUser.disabled) {
         let user = await User.findOne({ firebaseUid: decodedToken.uid });
         
-        if (user) {
+        if (user && user.isActive) {
           req.user = {
             id: user._id,
             firebaseUid: user.firebaseUid,

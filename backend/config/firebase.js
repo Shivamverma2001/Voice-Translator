@@ -114,6 +114,24 @@ const updateFirebaseUserProfile = async (uid, updateData) => {
   }
 };
 
+// Disable Firebase user account (soft delete)
+const disableFirebaseUser = async (uid) => {
+  try {
+    const auth = getAuth();
+    
+    // Disable the user account in Firebase
+    const updateResult = await auth.updateUser(uid, {
+      disabled: true
+    });
+    
+    console.log('✅ Firebase user account disabled successfully:', updateResult.uid);
+    return updateResult;
+  } catch (error) {
+    console.error('❌ Failed to disable Firebase user account:', error);
+    throw error;
+  }
+};
+
 // Create custom token (if needed)
 const createCustomToken = async (uid, additionalClaims = {}) => {
   try {
@@ -133,5 +151,6 @@ module.exports = {
   verifyIdToken,
   getUserByUid,
   updateFirebaseUserProfile,
+  disableFirebaseUser,
   createCustomToken
 };
