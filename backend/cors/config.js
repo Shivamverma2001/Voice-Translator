@@ -24,11 +24,18 @@ const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 // CORS options for Express app
 const corsOptions = {
   origin: function (origin, callback) {
+    // Log all origin checks for debugging
+    console.log('🔐 CORS check - Origin:', origin);
+    
     // Allow requests with no origin (e.g., mobile apps, curl)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin');
+      return callback(null, true);
+    }
     
     // Always allow ngrok domains
     if (origin.includes('ngrok-free.app') || origin.includes('ngrok.io')) {
+      console.log('✅ CORS: Allowing ngrok origin:', origin);
       return callback(null, true);
     }
     
@@ -38,7 +45,12 @@ const corsOptions = {
       return origin === allowed;
     });
     
-    if (isAllowed) return callback(null, true);
+    if (isAllowed) {
+      console.log('✅ CORS: Allowing origin from allowed list:', origin);
+      return callback(null, true);
+    }
+    
+    console.log('❌ CORS: Blocking origin:', origin);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   credentials: true,

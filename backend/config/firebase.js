@@ -12,9 +12,17 @@ const initializeFirebase = () => {
     }
 
     // Check if we have service account credentials
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      // Parse the service account key from environment variable
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH) {
+      // Read the service account key from JSON file
+      const fs = require('fs');
+      const path = require('path');
+      const serviceAccountPath = path.resolve(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH);
+      
+      if (!fs.existsSync(serviceAccountPath)) {
+        throw new Error(`Firebase service account file not found: ${serviceAccountPath}`);
+      }
+      
+      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
       
       firebaseApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
@@ -26,7 +34,7 @@ const initializeFirebase = () => {
         projectId: process.env.FIREBASE_PROJECT_ID
       });
     } else {
-      throw new Error('Firebase configuration not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_PROJECT_ID');
+      throw new Error('Firebase configuration not found. Please set FIREBASE_SERVICE_ACCOUNT_KEY_PATH or FIREBASE_PROJECT_ID');
     }
 
     console.log('✅ Firebase Admin SDK initialized successfully');
@@ -77,6 +85,35 @@ const getUserByUid = async (uid) => {
   }
 };
 
+// Update Firebase user profile
+const updateFirebaseUserProfile = async (uid, updateData) => {
+  try {
+    const auth = getAuth();
+    
+    // Prepare the update object with only Firebase-allowed fields
+    const firebaseUpdateData = {};
+    
+    // Only update displayName if firstName or lastName changed
+    if (updateData.firstName !== undefined || updateData.lastName !== undefined) {
+      firebaseUpdateData.displayName = `${updateData.firstName || ''} ${updateData.lastName || ''}`.trim();
+    }
+    
+    // Only proceed if we have data to update
+    if (Object.keys(firebaseUpdateData).length > 0) {
+      // Update the Firebase user profile
+      const updateResult = await auth.updateUser(uid, firebaseUpdateData);
+      console.log('✅ Firebase user profile updated successfully:', updateResult.uid);
+      return updateResult;
+    } else {
+      console.log('ℹ️ No Firebase fields to update');
+      return null;
+    }
+  } catch (error) {
+    console.error('❌ Failed to update Firebase user profile:', error);
+    throw error;
+  }
+};
+
 // Create custom token (if needed)
 const createCustomToken = async (uid, additionalClaims = {}) => {
   try {
@@ -95,5 +132,6 @@ module.exports = {
   getFirestore,
   verifyIdToken,
   getUserByUid,
+  updateFirebaseUserProfile,
   createCustomToken
 };

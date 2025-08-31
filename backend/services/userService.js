@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getLanguageByCode } = require('../master/languages');
+const { updateFirebaseUserProfile } = require('../config/firebase');
 
 class UserService {
   // User Registration
@@ -128,6 +129,87 @@ class UserService {
       return user;
     } catch (error) {
       throw new Error(`Failed to get user profile: ${error.message}`);
+    }
+  }
+
+  // Get User Profile by Firebase UID
+  async getUserByFirebaseUid(firebaseUid) {
+    try {
+      const user = await User.findOne({ firebaseUid }).select('-password');
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return user;
+    } catch (error) {
+      throw new Error(`Failed to get user profile: ${error.message}`);
+    }
+  }
+
+  // Update User Profile by Firebase UID
+  async updateUserProfileByFirebaseUid(firebaseUid, updateData) {
+    try {
+      const user = await User.findOne({ firebaseUid });
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Update allowed fields
+      const allowedFields = [
+        'firstName', 'lastName', 'age', 'phoneNumber', 'country', 'state',
+        'preferredLanguage', 'recommendedVoice', 'avatar', 'preferredLanguages', 
+        'settings', 'privacySettings'
+      ];
+
+      allowedFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          user[field] = updateData[field];
+        }
+      });
+
+      // Handle theme update specifically (store in settings.theme)
+      if (updateData.theme !== undefined) {
+        if (!user.settings) {
+          user.settings = {};
+        }
+        user.settings.theme = updateData.theme;
+      }
+
+      // Save MongoDB changes first
+      await user.save();
+
+      // Update Firebase user profile
+      try {
+        const firebaseUpdateResult = await updateFirebaseUserProfile(firebaseUid, updateData);
+        console.log('✅ Firebase user profile updated successfully');
+        
+        // Update firebaseMetadata in MongoDB to reflect the changes
+        if (firebaseUpdateResult) {
+          user.firebaseMetadata.lastSync = new Date();
+          
+          // Update displayName in firebaseData if it was changed
+          if (updateData.firstName !== undefined || updateData.lastName !== undefined) {
+            user.firebaseMetadata.firebaseData.displayName = `${updateData.firstName || ''} ${updateData.lastName || ''}`.trim();
+          }
+          
+          // Save the updated firebaseMetadata
+          await user.save();
+          console.log('✅ Firebase metadata updated in MongoDB');
+        }
+      } catch (firebaseError) {
+        console.error('⚠️ Firebase update failed, but MongoDB was updated:', firebaseError.message);
+        // Continue with the response even if Firebase update fails
+      }
+
+      // Return updated user without password
+      const userResponse = user.toObject();
+      delete userResponse.password;
+
+      return userResponse;
+    } catch (error) {
+      throw new Error(`Failed to update profile: ${error.message}`);
     }
   }
 
@@ -368,13 +450,13 @@ class UserService {
 
       allowedPrivacySettings.forEach(setting => {
         if (privacySettings[setting] !== undefined) {
-          user.privacySettings[setting] = privacySettings[setting];
+          user.settings[setting] = settings[setting];
         }
       });
 
       await user.save();
 
-      return user.privacySettings;
+      return user.settings;
     } catch (error) {
       throw new Error(`Failed to update privacy settings: ${error.message}`);
     }
@@ -424,7 +506,7 @@ class UserService {
       const user = await User.findById(userId);
       
       if (!user) {
-        throw new Error('User not found');
+        throw new Error('API key not found');
       }
 
       const apiKey = user.apiKeys.id(keyId);
@@ -582,128 +664,10 @@ class UserService {
     }
   }
 
-  // Clerk Integration Methods
-  async getUserByClerkId(clerkId) {
-    try {
-      const user = await User.findOne({ clerkId });
-      return user;
-    } catch (error) {
-      throw new Error(`Failed to get user by Clerk ID: ${error.message}`);
-    }
-  }
-
-  // Get user additional fields
-  async getUserAdditionalFields(clerkId) {
-    try {
-      const user = await User.findOne({ clerkId }).select('country state age gender preferredLanguage settings');
-      
-      if (!user) {
-        throw new Error('User not found');
-      }
-      
-      return user;
-    } catch (error) {
-      throw new Error(`Failed to get user additional fields: ${error.message}`);
-    }
-  }
-
-  // Update user additional fields
-  async updateUserAdditionalFields(clerkId, fieldsData) {
-    try {
-      const { country, state, age, gender, preferredLanguage, theme } = fieldsData;
-      
-      const user = await User.findOne({ clerkId });
-      
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      // Update the fields
-      user.country = country || '';
-      user.state = state || '';
-      user.age = age ? parseInt(age) : null;
-      user.gender = gender || 'prefer-not-to-say';
-      user.preferredLanguage = preferredLanguage || 'en';
-      
-      // Update settings.theme
-      if (!user.settings) {
-        user.settings = {};
-      }
-      user.settings.theme = theme || 'light';
-
-      await user.save();
-
-      return {
-        country: user.country,
-        state: user.state,
-        age: user.age,
-        gender: user.gender,
-        preferredLanguage: user.preferredLanguage,
-        settings: user.settings
-      };
-    } catch (error) {
-      throw new Error(`Failed to update user additional fields: ${error.message}`);
-    }
-  }
-
-  // Update Clerk profile data
-  async updateClerkProfileData(clerkId, clerkData) {
-    try {
-      const user = await User.findOne({ clerkId });
-      
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      // Initialize clerkMetadata if it doesn't exist
-      if (!user.clerkMetadata) {
-        user.clerkMetadata = {};
-      }
-      if (!user.clerkMetadata.clerkData) {
-        user.clerkMetadata.clerkData = {};
-      }
-
-      // Dynamically update any fields that are provided
-      Object.entries(clerkData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          // Update main user fields
-          if (['firstName', 'lastName', 'username', 'email'].includes(key)) {
-            user[key] = value;
-          }
-          
-          // Handle special field mappings
-          if (key === 'imageUrl') {
-            user.avatar = value;
-          }
-          
-          // Update clerkMetadata.clerkData
-          user.clerkMetadata.clerkData[key] = value;
-        }
-      });
-      
-      // Update timestamps
-      user.clerkMetadata.lastSync = new Date();
-      user.clerkMetadata.clerkData.updatedAt = new Date();
-
-      await user.save();
-
-      return {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        clerkMetadata: user.clerkMetadata
-      };
-    } catch (error) {
-      throw new Error(`Failed to update Clerk profile data: ${error.message}`);
-    }
-  }
-
   // Debug: Get all users (for troubleshooting)
   async getAllUsersForDebug() {
     try {
-      const users = await User.find({}, 'clerkId email firstName lastName isClerkUser');
+      const users = await User.find({}, 'firebaseUid email firstName lastName isFirebaseUser');
       return users;
     } catch (error) {
       throw new Error(`Failed to get all users: ${error.message}`);

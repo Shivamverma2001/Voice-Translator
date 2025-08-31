@@ -19,7 +19,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@clerk/backend": "^2.9.4",
     "@google-cloud/speech": "^7.1.0",
     "@google-cloud/text-to-speech": "^6.1.0",
     "@google-cloud/translate": "^9.1.0",
@@ -34,6 +33,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^7.3.1",
     "express-validator": "^7.0.1",
+    "firebase-admin": "^13.5.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.10.0",
