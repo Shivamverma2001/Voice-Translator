@@ -100,6 +100,25 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // Security and password management
+  security: {
+    lastPasswordChange: {
+      type: Date,
+      default: Date.now
+    },
+    passwordResetAt: {
+      type: Date,
+      default: null
+    },
+    passwordResetToken: {
+      type: String,
+      default: null
+    },
+    passwordResetExpires: {
+      type: Date,
+      default: null
+    }
+  },
   // Location Information
   address: {
     street: String,

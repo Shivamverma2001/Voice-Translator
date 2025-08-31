@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getLanguageByCode } = require('../master/languages');
-const { updateFirebaseUserProfile, disableFirebaseUser } = require('../config/firebase');
+const { updateFirebaseUserProfile, disableFirebaseUser, getAuth } = require('../config/firebase');
 
 class UserService {
   // User Registration
@@ -605,7 +605,7 @@ class UserService {
     }
   }
 
-  // Soft Delete User Account (set isActive to false and disable Firebase)
+  // Soft Delete User Account (delete from Firebase + set isActive to false in MongoDB)
   async softDeleteUserAccount(firebaseUid) {
     try {
       // Find user by Firebase UID
@@ -620,34 +620,36 @@ class UserService {
         throw new Error('User account is already deactivated');
       }
 
-      // Update MongoDB: set isActive to false and add deactivation timestamp
+      // Delete Firebase user account completely
+      try {
+        const auth = getAuth();
+        await auth.deleteUser(firebaseUid);
+        console.log('✅ Firebase user account deleted successfully');
+      } catch (firebaseError) {
+        console.error('⚠️ Firebase user deletion failed, but MongoDB updated:', firebaseError);
+        // Don't fail the entire operation if Firebase deletion fails
+        // MongoDB update was successful
+      }
+
+      // Update MongoDB: set isActive to false, add deactivation timestamp, and clear Firebase UID
       const updatedUser = await User.findOneAndUpdate(
         { firebaseUid },
         { 
           isActive: false,
           deactivatedAt: new Date(),
+          firebaseUid: null, // Clear the Firebase UID since user is deleted from Firebase
           'firebaseMetadata.lastSync': new Date()
         },
         { new: true }
       );
 
-      // Disable Firebase user account
-      try {
-        await disableFirebaseUser(firebaseUid);
-        console.log('✅ Firebase user account disabled successfully');
-      } catch (firebaseError) {
-        console.error('⚠️ Firebase user disable failed, but MongoDB updated:', firebaseError);
-        // Don't fail the entire operation if Firebase update fails
-        // MongoDB update was successful
-      }
-
       return { 
         success: true,
-        message: 'Account deactivated successfully',
+        message: 'Account deleted successfully',
         user: updatedUser
       };
     } catch (error) {
-      throw new Error(`Failed to deactivate account: ${error.message}`);
+      throw new Error(`Failed to delete account: ${error.message}`);
     }
   }
 

@@ -132,6 +132,45 @@ const disableFirebaseUser = async (uid) => {
   }
 };
 
+// Generate password reset link
+const generatePasswordResetLink = async (email) => {
+  try {
+    const auth = getAuth();
+    const resetLink = await auth.generatePasswordResetLink(email);
+    console.log('✅ Password reset link generated for:', email);
+    return resetLink;
+  } catch (error) {
+    console.error('❌ Failed to generate password reset link:', error);
+    throw error;
+  }
+};
+
+// Verify password reset code
+const verifyPasswordResetCode = async (oobCode) => {
+  try {
+    const auth = getAuth();
+    const email = await auth.verifyPasswordResetCode(oobCode);
+    console.log('✅ Password reset code verified for:', email);
+    return email;
+  } catch (error) {
+    console.error('❌ Failed to verify password reset code:', error);
+    throw error;
+  }
+};
+
+// Confirm password reset
+const confirmPasswordReset = async (oobCode, newPassword) => {
+  try {
+    const auth = getAuth();
+    await auth.confirmPasswordReset(oobCode, newPassword);
+    console.log('✅ Password reset confirmed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to confirm password reset:', error);
+    throw error;
+  }
+};
+
 // Create custom token (if needed)
 const createCustomToken = async (uid, additionalClaims = {}) => {
   try {
@@ -152,5 +191,8 @@ module.exports = {
   getUserByUid,
   updateFirebaseUserProfile,
   disableFirebaseUser,
+  generatePasswordResetLink,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   createCustomToken
 };
