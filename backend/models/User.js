@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
       // Username is required only for non-Firebase users
       return !this.isFirebaseUser;
     },
-    unique: true,
+    unique: false,
     sparse: true, // Allow null values for Firebase users
     trim: true,
     minlength: [3, 'Username must be at least 3 characters long'],
@@ -34,8 +34,7 @@ const userSchema = new mongoose.Schema({
       // Email is required for all users (both Firebase and non-Firebase)
       return true;
     },
-    unique: true,
-    sparse: true, // Allow null values temporarily during creation
+    unique: false, // Remove unique constraint - we'll handle uniqueness for active users only
     trim: true,
     lowercase: true,
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']

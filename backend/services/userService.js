@@ -624,16 +624,21 @@ class UserService {
       try {
         const auth = getAuth();
         await auth.deleteUser(firebaseUid);
-        console.log('✅ Firebase user account deleted successfully');
+        console.log('✅ Firebase user account deleted successfully:', firebaseUid);
       } catch (firebaseError) {
-        console.error('⚠️ Firebase user deletion failed, but MongoDB updated:', firebaseError);
+        console.error('❌ Firebase user deletion failed:', firebaseError);
+        console.error('❌ Firebase error details:', {
+          code: firebaseError.code,
+          message: firebaseError.message,
+          firebaseUid: firebaseUid
+        });
         // Don't fail the entire operation if Firebase deletion fails
         // MongoDB update was successful
       }
 
       // Update MongoDB: set isActive to false, add deactivation timestamp, and clear Firebase UID
       const updatedUser = await User.findOneAndUpdate(
-        { firebaseUid },
+        { _id: user._id }, // Use MongoDB _id instead of firebaseUid to avoid conflicts
         { 
           isActive: false,
           deactivatedAt: new Date(),

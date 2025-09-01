@@ -32,9 +32,20 @@ class AuthController {
         });
       }
 
-      // If user exists but is deactivated, allow creating new account
+      // If user exists but is deactivated, allow creating new account (keep old record for history)
       if (existingUser && !existingUser.isActive) {
         console.log('ℹ️ Deactivated user exists with email, allowing new account creation:', email);
+        
+        // If the deactivated user still has a Firebase UID, try to clean it up
+        if (existingUser.firebaseUid) {
+          try {
+            const auth = getAuth();
+            await auth.deleteUser(existingUser.firebaseUid);
+            console.log('🗑️ Cleaned up remaining Firebase user for deactivated account:', existingUser.firebaseUid);
+          } catch (cleanupError) {
+            console.log('ℹ️ Firebase user already deleted or not found:', cleanupError.message);
+          }
+        }
       }
 
       // Create Firebase user
@@ -68,6 +79,7 @@ class AuthController {
         email: firebaseUser.email,
         firstName: firstName,
         lastName: lastName,
+        username: email.split('@')[0], // Use email as username since it's unique
         firebaseMetadata: {
           lastSync: new Date(),
           firebaseData: {
@@ -97,7 +109,8 @@ class AuthController {
           lastName: user.lastName,
           emailVerified: false
         },
-        customToken: customToken
+        customToken: customToken,
+        requiresEmailVerification: true // Flag to indicate email verification needed
       });
     } catch (error) {
       console.error('❌ Error in signUp:', error);
@@ -159,12 +172,27 @@ class AuthController {
         });
       }
 
-      // Check email verification
+      // Check email verification with refresh mechanism
       if (!firebaseUser.emailVerified) {
-        return res.status(401).json({
-          success: false,
-          error: 'Please verify your email address before signing in. Check your inbox and spam folder.'
-        });
+        console.log('🔄 Email not verified, refreshing Firebase user data...');
+        try {
+          // Refresh Firebase user data to get latest verification status
+          firebaseUser = await auth.getUser(user.firebaseUid);
+          console.log('📧 Refreshed email verification status:', firebaseUser.emailVerified);
+          
+          if (!firebaseUser.emailVerified) {
+            return res.status(401).json({
+              success: false,
+              error: 'Please verify your email address before signing in. Check your inbox and spam folder.'
+            });
+          }
+        } catch (refreshError) {
+          console.error('❌ Failed to refresh Firebase user:', refreshError);
+          return res.status(401).json({
+            success: false,
+            error: 'Please verify your email address before signing in. Check your inbox and spam folder.'
+          });
+        }
       }
 
       // Update last active timestamp
