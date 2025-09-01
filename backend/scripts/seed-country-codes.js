@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const { connectDB, mongoose } = require('../db/connection');
 const CountryCode = require('../models/CountryCode');
 const { countryCodes } = require('../master/countryCodes'); // Import from master file
@@ -18,6 +18,7 @@ async function seedCountryCodes() {
     const initialCountryCodes = Object.values(countryCodes).map(code => ({
       country: code.country,
       countryCode: code.countryCode,
+      dialingCode: code.dialingCode,
       isActive: code.isActive
     }));
 
@@ -28,7 +29,7 @@ async function seedCountryCodes() {
     // Display seeded country codes
     console.log('\n📋 Seeded Country Codes:');
     seededCountryCodes.forEach(code => {
-      console.log(`  ${code.country} (${code.countryCode})`);
+      console.log(`  ${code.country} (${code.dialingCode})`);
     });
 
     console.log('\n🎉 Country code seeding completed successfully!');

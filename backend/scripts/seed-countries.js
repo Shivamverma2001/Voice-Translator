@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const { connectDB, mongoose } = require('../db/connection');
 const Country = require('../models/Country');
 const { countries } = require('../master/countries'); // Import from master file

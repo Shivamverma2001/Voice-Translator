@@ -32,7 +32,7 @@ router.use('/document-translate', uploadLimiter, documentTranslateRoutes);
 router.use('/languages', apiLimiter, languageRoutes);
 router.use('/rooms', apiLimiter, roomRoutes);
 router.use('/firebase-auth', apiLimiter, firebaseAuthRoutes);
-router.use('/users', apiLimiter, userRoutes);
+router.use('/users', userRoutes); // Temporarily disabled rate limiting for development
 router.use('/auth', apiLimiter, authRoutes);
 router.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
 

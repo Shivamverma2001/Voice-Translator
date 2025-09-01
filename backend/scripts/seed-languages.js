@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const { connectDB, mongoose } = require('../db/connection');
 const Language = require('../models/Language');
 const { languages } = require('../master/languages');

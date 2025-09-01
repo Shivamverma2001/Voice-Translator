@@ -10,10 +10,7 @@
     "client": "cd frontend && REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL:-http://localhost:5001} npm start",
     "test": "jest",
     "lint": "eslint backend/",
-    "db:seed": "node backend/scripts/seed-languages.js",
-    "db:seed:countries": "node backend/scripts/seed-countries.js",
-    "db:seed:country-codes": "node backend/scripts/seed-country-codes.js",
-    "db:seed:all": "npm run db:seed && npm run db:seed:countries && npm run db:seed:country-codes"
+    "db:seed": "cd backend && ./scripts/seed.sh"
   },
   "proxy": "http://localhost:5001",
   "author": "",
