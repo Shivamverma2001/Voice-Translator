@@ -3,9 +3,6 @@ const router = express.Router();
 const { authenticateFirebaseToken } = require('../middleware/firebaseAuth');
 const userController = require('../controllers/userController');
 
-// Get user profile by Firebase UID
-router.get('/profile', authenticateFirebaseToken, userController.getUserProfile);
-
 // Update user profile by Firebase UID
 router.put('/profile', authenticateFirebaseToken, userController.updateUserProfile);
 

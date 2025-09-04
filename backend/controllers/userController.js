@@ -2,58 +2,6 @@ const userService = require('../services/userService');
 const { getAuth } = require('../config/firebase');
 
 class UserController {
-  // Get user profile by Firebase UID
-  async getUserProfile(req, res) {
-    try {
-      // Get Firebase UID from the authenticated request
-      const firebaseUid = req.user?.firebaseUid;
-      
-      if (!firebaseUid) {
-        return res.status(401).json({ 
-        success: false,
-          message: 'Firebase UID not found in request' 
-        });
-      }
-
-      console.log('Getting profile for Firebase UID:', firebaseUid);
-      
-      // Get user profile from MongoDB via service
-      const user = await userService.getUserByFirebaseUid(firebaseUid);
-      
-      if (!user) {
-        return res.status(404).json({ 
-        success: false,
-          message: 'User not found' 
-        });
-      }
-
-      // Get display names for master data fields
-      const displayNames = await userService.getUserDisplayNames(user);
-      
-      // Combine user data with display names and filter out sensitive data
-      const userData = user.toObject();
-      const userWithDisplayNames = {
-        ...userData,
-        ...displayNames
-      };
-
-      // Remove sensitive security information
-      delete userWithDisplayNames.security;
-      delete userWithDisplayNames.password;
-      delete userWithDisplayNames.__v;
-      
-      res.json({ 
-        success: true,
-        user: userWithDisplayNames 
-      });
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
-  }
 
   // Update user profile by Firebase UID
   async updateUserProfile(req, res) {
@@ -91,10 +39,19 @@ class UserController {
         }
       }
       
+      // Get display names for master data fields
+      const displayNames = await userService.getUserDisplayNames(updatedUser);
+      
+      // Combine user data with display names
+      const userWithDisplayNames = {
+        ...updatedUser,
+        ...displayNames
+      };
+      
       res.json({ 
         success: true,
         message: 'Profile updated successfully',
-        user: updatedUser
+        user: userWithDisplayNames
       });
     } catch (error) {
       console.error('Error updating user profile:', error);

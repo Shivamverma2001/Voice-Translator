@@ -299,7 +299,7 @@ class UserService {
       // Update allowed fields
       const allowedFields = [
         'firstName', 'lastName', 'age', 'phoneNumber', 'country', 'state',
-        'preferredLanguage', 'recommendedVoice', 'avatar', 'preferredLanguages', 
+        'gender', 'preferredLanguage', 'recommendedVoice', 'avatar', 'preferredLanguages', 
         'settings', 'privacySettings'
       ];
 
