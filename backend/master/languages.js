@@ -3,221 +3,221 @@
 
 const languages = {
   // English variants
-  'EN': { 
+  'en': { 
     name: 'English', 
-    shortcode: 'EN', 
+    shortcode: 'en', 
     country: 'United States',
     isActive: true
   },
-  'EN-US': { 
+  'en-us': { 
     name: 'English (US)', 
-    shortcode: 'EN-US', 
+    shortcode: 'en-us', 
     country: 'United States',
     isActive: true
   },
 
   // European Languages
-  'ES': { 
+  'es': { 
     name: 'Spanish', 
-    shortcode: 'ES', 
+    shortcode: 'es', 
     country: 'Spain',
     isActive: true
   },
-  'FR': { 
+  'fr': { 
     name: 'French', 
-    shortcode: 'FR', 
+    shortcode: 'fr', 
     country: 'France',
     isActive: true
   },
-  'DE': { 
+  'de': { 
     name: 'German', 
-    shortcode: 'DE', 
+    shortcode: 'de', 
     country: 'Germany',
     isActive: true
   },
-  'IT': { 
+  'it': { 
     name: 'Italian', 
-    shortcode: 'IT', 
+    shortcode: 'it', 
     country: 'Italy',
     isActive: true
   },
-  'PT': { 
+  'pt': { 
     name: 'Portuguese', 
-    shortcode: 'PT', 
+    shortcode: 'pt', 
     country: 'Portugal',
     isActive: true
   },
-  'RU': { 
+  'ru': { 
     name: 'Russian', 
-    shortcode: 'RU', 
+    shortcode: 'ru', 
     country: 'Russia',
     isActive: true
   },
-  'NL': { 
+  'nl': { 
     name: 'Dutch', 
-    shortcode: 'NL', 
+    shortcode: 'nl', 
     country: 'Netherlands',
     isActive: true
   },
-  'PL': { 
+  'pl': { 
     name: 'Polish', 
-    shortcode: 'PL', 
+    shortcode: 'pl', 
     country: 'Poland',
     isActive: true
   },
-  'SV': { 
+    'sv': { 
     name: 'Swedish', 
-    shortcode: 'SV', 
+    shortcode: 'sv', 
     country: 'Sweden',
     isActive: true
   },
-  'NO': { 
+  'no': { 
     name: 'Norwegian', 
-    shortcode: 'NO', 
+    shortcode: 'no', 
     country: 'Norway',
     isActive: true
   },
-  'DA': { 
+  'da': { 
     name: 'Danish', 
-    shortcode: 'DA', 
+    shortcode: 'da', 
     country: 'Denmark',
     isActive: true
   },
-  'FI': { 
+  'fi': { 
     name: 'Finnish', 
-    shortcode: 'FI', 
+    shortcode: 'fi', 
     country: 'Finland',
     isActive: true
   },
 
   // Asian Languages
-  'JA': { 
+  'ja': { 
     name: 'Japanese', 
-    shortcode: 'JA', 
+    shortcode: 'ja', 
     country: 'Japan',
     isActive: true
   },
-  'KO': { 
+  'ko': { 
     name: 'Korean', 
-    shortcode: 'KO', 
+    shortcode: 'ko', 
     country: 'South Korea',
     isActive: true
   },
-  'ZH': { 
+  'zh': { 
     name: 'Chinese', 
-    shortcode: 'ZH', 
+    shortcode: 'zh', 
     country: 'China',
     isActive: true
   },
 
   // Middle Eastern Languages
-  'AR': { 
+  'ar': { 
     name: 'Arabic', 
-    shortcode: 'AR', 
+    shortcode: 'ar', 
     country: 'Saudi Arabia',
     isActive: true
   },
 
   // Indian Languages
-  'HI': { 
+  'hi': { 
     name: 'Hindi', 
-    shortcode: 'HI', 
+    shortcode: 'hi', 
     country: 'India',
     isActive: true
   },
-  'SA': { 
+  'sa': { 
     name: 'Sanskrit', 
-    shortcode: 'SA', 
+    shortcode: 'sa', 
     country: 'India',
     isActive: true
   },
-  'MR': { 
+  'mr': { 
     name: 'Marathi', 
-    shortcode: 'MR', 
+    shortcode: 'mr', 
     country: 'India',
     isActive: true
   },
-  'TE': { 
+  'te': { 
     name: 'Telugu', 
-    shortcode: 'TE', 
+    shortcode: 'te', 
     country: 'India',
     isActive: true
   },
-  'ML': { 
+  'ml': { 
     name: 'Malayalam', 
-    shortcode: 'ML', 
+    shortcode: 'ml', 
     country: 'India',
     isActive: true
   },
-  'UR': { 
+  'ur': { 
     name: 'Urdu', 
-    shortcode: 'UR', 
+    shortcode: 'ur', 
     country: 'India',
     isActive: true
   },
-  'PA': { 
+  'pa': { 
     name: 'Punjabi', 
-    shortcode: 'PA', 
+    shortcode: 'pa', 
     country: 'India',
     isActive: true
   },
-  'BN': { 
+  'bn': { 
     name: 'Bengali', 
-    shortcode: 'BN', 
+    shortcode: 'bn', 
     country: 'India',
     isActive: true
   },
 
   // Additional English variants
-  'EN-GB': { 
+  'en-gb': { 
     name: 'English (UK)', 
-    shortcode: 'EN-GB', 
+    shortcode: 'en-gb', 
     country: 'United Kingdom',
     isActive: true
   },
-  'EN-CA': { 
+  'en-ca': { 
     name: 'English (Canada)', 
-    shortcode: 'EN-CA', 
+    shortcode: 'en-ca', 
     country: 'Canada',
     isActive: true
   },
-  'EN-AU': { 
+  'en-au': { 
     name: 'English (Australia)', 
-    shortcode: 'EN-AU', 
+    shortcode: 'en-au', 
     country: 'Australia',
     isActive: true
   },
 
   // Additional Spanish variants
-  'ES-MX': { 
+  'es-mx': { 
     name: 'Spanish (Mexico)', 
-    shortcode: 'ES-MX', 
+    shortcode: 'es-mx', 
     country: 'Mexico',
     isActive: true
   },
-  'ES-AR': { 
+  'es-ar': { 
     name: 'Spanish (Argentina)', 
-    shortcode: 'ES-AR', 
+    shortcode: 'es-ar', 
     country: 'Argentina',
     isActive: true
   },
 
   // Additional French variants
-  'FR-CA': { 
+  'fr-ca': { 
     name: 'French (Canada)', 
-    shortcode: 'FR-CA', 
+    shortcode: 'fr-ca', 
     country: 'Canada',
     isActive: true
   },
 
   // Additional German variants
-  'DE-AT': { 
+  'de-at': { 
     name: 'German (Austria)', 
-    shortcode: 'DE-AT', 
+    shortcode: 'de-at', 
     country: 'Austria',
     isActive: true
   },
-  'DE-CH': { 
+  'de-ch': { 
     name: 'German (Switzerland)', 
     shortcode: 'DE-CH', 
     country: 'Switzerland',
@@ -225,291 +225,291 @@ const languages = {
   },
 
   // Additional Portuguese variants
-  'PT-BR': { 
+  'pt-br': { 
     name: 'Portuguese (Brazil)', 
-    shortcode: 'PT-BR', 
+    shortcode: 'pt-br', 
     country: 'Brazil',
     isActive: true
   },
 
   // Additional European languages
-  'TR': { 
+    'tr': { 
     name: 'Turkish', 
-    shortcode: 'TR', 
+    shortcode: 'tr', 
     country: 'Turkey',
     isActive: true
   },
-  'EL': { 
+  'el': { 
     name: 'Greek', 
-    shortcode: 'EL', 
+    shortcode: 'el', 
     country: 'Greece',
     isActive: true
   },
-  'HE': { 
+  'he': { 
     name: 'Hebrew', 
-    shortcode: 'HE', 
+    shortcode: 'he', 
     country: 'Israel',
     isActive: true
   },
-  'CS': { 
+  'cs': { 
     name: 'Czech', 
-    shortcode: 'CS', 
+    shortcode: 'cs', 
     country: 'Czech Republic',
     isActive: true
   },
-  'SK': { 
+  'sk': { 
     name: 'Slovak', 
-    shortcode: 'SK', 
+    shortcode: 'sk', 
     country: 'Slovakia',
     isActive: true
   },
-  'HU': { 
+  'hu': { 
     name: 'Hungarian', 
-    shortcode: 'HU', 
+    shortcode: 'hu', 
     country: 'Hungary',
     isActive: true
   },
-  'RO': { 
+      'ro': { 
     name: 'Romanian', 
-    shortcode: 'RO', 
+    shortcode: 'ro', 
     country: 'Romania',
     isActive: true
   },
-  'BG': { 
+  'bg': { 
     name: 'Bulgarian', 
-    shortcode: 'BG', 
+    shortcode: 'bg', 
     country: 'Bulgaria',
     isActive: true
   },
-  'HR': { 
+    'hr': { 
     name: 'Croatian', 
-    shortcode: 'HR', 
+    shortcode: 'hr', 
     country: 'Croatia',
     isActive: true
   },
-  'SL': { 
+  'sl': { 
     name: 'Slovenian', 
-    shortcode: 'SL', 
+    shortcode: 'sl', 
     country: 'Slovenia',
     isActive: true
   },
-  'ET': { 
+  'et': { 
     name: 'Estonian', 
-    shortcode: 'ET', 
+    shortcode: 'et', 
     country: 'Estonia',
     isActive: true
   },
-  'LV': { 
+  'lv': { 
     name: 'Latvian', 
-    shortcode: 'LV', 
+    shortcode: 'lv', 
     country: 'Latvia',
     isActive: true
   },
-  'LT': { 
+  'lt': { 
     name: 'Lithuanian', 
-    shortcode: 'LT', 
+    shortcode: 'lt', 
     country: 'Lithuania',
     isActive: true
   },
-  'MT': { 
+  'mt': { 
     name: 'Maltese', 
-    shortcode: 'MT', 
+    shortcode: 'mt', 
     country: 'Malta',
     isActive: true
   },
 
   // Additional Chinese variants
-  'ZH-CN': { 
+      'zh-cn': { 
     name: 'Chinese (Simplified)', 
-    shortcode: 'ZH-CN', 
+    shortcode: 'zh-cn', 
     country: 'China',
     isActive: true
   },
-  'ZH-TW': { 
+  'zh-tw': { 
     name: 'Chinese (Traditional)', 
-    shortcode: 'ZH-TW', 
+    shortcode: 'zh-tw', 
     country: 'Taiwan',
     isActive: true
   },
 
   // Additional Asian languages
-  'TH': { 
+  'th': { 
     name: 'Thai', 
-    shortcode: 'TH', 
+    shortcode: 'th', 
     country: 'Thailand',
     isActive: true
   },
-  'VI': { 
+  'vi': { 
     name: 'Vietnamese', 
-    shortcode: 'VI', 
+    shortcode: 'vi', 
     country: 'Vietnam',
     isActive: true
   },
-  'ID': { 
+  'id': { 
     name: 'Indonesian', 
-    shortcode: 'ID', 
+    shortcode: 'id', 
     country: 'Indonesia',
     isActive: true
   },
-  'MS': { 
+  'ms': { 
     name: 'Malay', 
-    shortcode: 'MS', 
+    shortcode: 'ms', 
     country: 'Malaysia',
     isActive: true
   },
-  'TL': { 
+        'tl': { 
     name: 'Filipino', 
-    shortcode: 'TL', 
+    shortcode: 'tl', 
     country: 'Philippines',
     isActive: true
   },
-  'KM': { 
+  'km': { 
     name: 'Khmer', 
-    shortcode: 'KM', 
+    shortcode: 'km', 
     country: 'Cambodia',
     isActive: true
   },
-  'LO': { 
+  'lo': { 
     name: 'Lao', 
-    shortcode: 'LO', 
+    shortcode: 'lo', 
     country: 'Laos',
     isActive: true
   },
-  'MY': { 
+  'my': { 
     name: 'Burmese', 
-    shortcode: 'MY', 
+    shortcode: 'my', 
     country: 'Myanmar',
     isActive: true
   },
-  'SI': { 
+  'si': { 
     name: 'Sinhala', 
-    shortcode: 'SI', 
+    shortcode: 'si', 
     country: 'Sri Lanka',
     isActive: true
   },
-  'NE': { 
+  'ne': { 
     name: 'Nepali', 
-    shortcode: 'NE', 
+    shortcode: 'ne', 
     country: 'Nepal',
     isActive: true
   },
 
   // Additional Middle Eastern languages
-  'FA': { 
+    'fa': { 
     name: 'Persian', 
-    shortcode: 'FA', 
+    shortcode: 'fa', 
     country: 'Iran',
     isActive: true
   },
-  'KU': { 
+  'ku': { 
     name: 'Kurdish', 
-    shortcode: 'KU', 
+    shortcode: 'ku', 
     country: 'Iraq',
     isActive: true
   },
 
   // Additional Indian languages
-  'GU': { 
+  'gu': { 
     name: 'Gujarati', 
-    shortcode: 'GU', 
+    shortcode: 'gu', 
     country: 'India',
     isActive: true
   },
-  'OR': { 
+  'or': { 
     name: 'Odia', 
-    shortcode: 'OR', 
+    shortcode: 'or', 
     country: 'India',
     isActive: true
   },
-  'AS': { 
+  'as': { 
     name: 'Assamese', 
-    shortcode: 'AS', 
+    shortcode: 'as', 
     country: 'India',
     isActive: true
   },
-  'KN': { 
+  'kn': { 
     name: 'Kannada', 
-    shortcode: 'KN', 
+    shortcode: 'kn', 
     country: 'India',
     isActive: true
   },
-  'TA': { 
+  'ta': { 
     name: 'Tamil', 
-    shortcode: 'TA', 
+    shortcode: 'ta', 
     country: 'India',
     isActive: true
   },
-  'MT': { 
+  'mt': { 
     name: 'Maithili', 
-    shortcode: 'MT', 
+    shortcode: 'mt', 
     country: 'India',
     isActive: true
   },
 
   // African languages
-  'AM': { 
+  'am': { 
     name: 'Amharic', 
-    shortcode: 'AM', 
+    shortcode: 'am', 
     country: 'Ethiopia',
     isActive: true
   },
-  'SW': { 
+      'sw': { 
     name: 'Swahili', 
-    shortcode: 'SW', 
+    shortcode: 'sw', 
     country: 'Tanzania',
     isActive: true
   },
-  'ZU': { 
+  'zu': { 
     name: 'Zulu', 
-    shortcode: 'ZU', 
+    shortcode: 'zu', 
     country: 'South Africa',
     isActive: true
   },
-  'AF': { 
+  'af': { 
     name: 'Afrikaans', 
-    shortcode: 'AF', 
+    shortcode: 'af', 
     country: 'South Africa',
     isActive: true
   },
-  'XH': { 
+  'xh': { 
     name: 'Xhosa', 
-    shortcode: 'XH', 
+    shortcode: 'xh', 
     country: 'South Africa',
     isActive: true
   },
-  'YO': { 
+  'yo': { 
     name: 'Yoruba', 
-    shortcode: 'YO', 
+    shortcode: 'yo', 
     country: 'Nigeria',
     isActive: true
   },
-  'IG': { 
+  'ig': { 
     name: 'Igbo', 
-    shortcode: 'IG', 
+    shortcode: 'ig', 
     country: 'Nigeria',
     isActive: true
   },
-  'HA': { 
+    'ha': { 
     name: 'Hausa', 
-    shortcode: 'HA', 
+    shortcode: 'ha', 
     country: 'Nigeria',
     isActive: true
   },
-  'SO': { 
+  'so': { 
     name: 'Somali', 
-    shortcode: 'SO', 
+    shortcode: 'so', 
     country: 'Somalia',
     isActive: true
   },
-  'RW': { 
+  'rw': { 
     name: 'Kinyarwanda', 
-    shortcode: 'RW', 
+    shortcode: 'rw', 
     country: 'Rwanda',
     isActive: true
   },
-  'LG': { 
+  'lg': { 
     name: 'Luganda', 
-    shortcode: 'LG', 
+    shortcode: 'lg', 
     country: 'Uganda',
     isActive: true
   }

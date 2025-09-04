@@ -5,7 +5,147 @@ const crypto = require('crypto');
 const { getLanguageByCode } = require('../master/languages');
 const { updateFirebaseUserProfile, disableFirebaseUser, getAuth } = require('../config/firebase');
 
+// Import master data models for display names
+const Gender = require('../models/Gender');
+const Country = require('../models/Country');
+const Language = require('../models/Language');
+const Voice = require('../models/Voice');
+const Theme = require('../models/Theme');
+
 class UserService {
+  // Helper function to get display names for user data
+  async getUserDisplayNames(user) {
+    try {
+      const [genderData, countryData, languageData, voiceData, themeData] = await Promise.all([
+        user.gender ? Gender.findOne({ id: user.gender, isActive: true }) : null,
+        user.country ? Country.findOne({ countryCode: user.country, isActive: true }) : null,
+        user.preferredLanguage ? Language.findOne({ shortcode: user.preferredLanguage, isActive: true }) : null,
+        user.recommendedVoice ? Voice.findOne({ id: user.recommendedVoice, isActive: true }) : null,
+        user.settings?.theme ? Theme.findOne({ id: user.settings.theme, isActive: true }) : null
+      ]);
+
+      return {
+        genderDisplayName: genderData?.displayName || genderData?.name || user.gender,
+        countryDisplayName: countryData?.name || user.country,
+        languageDisplayName: languageData?.name || user.preferredLanguage,
+        voiceDisplayName: voiceData?.displayName || voiceData?.name || user.recommendedVoice,
+        themeDisplayName: themeData?.displayName || themeData?.name || user.settings?.theme
+      };
+    } catch (error) {
+      console.error('Error getting display names:', error);
+      return {
+        genderDisplayName: user.gender,
+        countryDisplayName: user.country,
+        languageDisplayName: user.preferredLanguage,
+        voiceDisplayName: user.recommendedVoice,
+        themeDisplayName: user.settings?.theme
+      };
+    }
+  }
+
+  // Check if email exists and is active
+  async checkEmailExists(email) {
+    try {
+      const existingUser = await User.findOne({ email });
+      
+      return {
+        exists: !!(existingUser && existingUser.isActive),
+        user: existingUser,
+        isActive: existingUser?.isActive || false,
+        isDeactivated: existingUser && !existingUser.isActive,
+        deactivatedAt: existingUser?.deactivatedAt || null
+      };
+    } catch (error) {
+      console.error('Error checking email existence:', error);
+      throw new Error('Failed to check email existence');
+    }
+  }
+
+  // Find user by email
+  async findUserByEmail(email) {
+    try {
+      const user = await User.findOne({ email });
+      return user;
+    } catch (error) {
+      console.error('Error finding user by email:', error);
+      throw new Error('Failed to find user');
+    }
+  }
+
+  // Update user's last active timestamp
+  async updateLastActive(firebaseUid) {
+    try {
+      const user = await User.findOneAndUpdate(
+        { firebaseUid },
+        { 'usageStats.lastActive': new Date() },
+        { new: true }
+      );
+      return user;
+    } catch (error) {
+      console.error('Error updating last active:', error);
+      throw new Error('Failed to update last active timestamp');
+    }
+  }
+
+  // Clean up deactivated user's Firebase account
+  async cleanupDeactivatedUser(existingUser) {
+    try {
+      if (existingUser.firebaseUid) {
+        const auth = getAuth();
+        await auth.deleteUser(existingUser.firebaseUid);
+        console.log('🗑️ Cleaned up remaining Firebase user for deactivated account:', existingUser.firebaseUid);
+        return true;
+      }
+      return false;
+    } catch (cleanupError) {
+      console.log('ℹ️ Firebase user already deleted or not found:', cleanupError.message);
+      return false;
+    }
+  }
+
+  // Create user with Firebase UID
+  async createUserWithFirebaseUid(userData) {
+    try {
+      const user = new User({
+        firebaseUid: userData.firebaseUid,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        username: userData.username || userData.email.split('@')[0],
+        isFirebaseUser: true,
+        role: 'user',
+        isActive: true,
+        usageStats: {
+          lastActive: new Date()
+        }
+      });
+
+      await user.save();
+      return user;
+    } catch (error) {
+      console.error('Error creating user with Firebase UID:', error);
+      throw new Error('Failed to create user');
+    }
+  }
+
+  // Update password reset information
+  async updatePasswordResetInfo(email) {
+    try {
+      const user = await User.findOneAndUpdate(
+        { email },
+        { 
+          'security.lastPasswordChange': new Date(),
+          'security.passwordResetAt': new Date()
+        },
+        { new: true }
+      );
+      return user;
+    } catch (error) {
+      console.error('Error updating password reset info:', error);
+      throw new Error('Failed to update password reset information');
+    }
+  }
+
   // User Registration
   async registerUser(userData) {
     try {

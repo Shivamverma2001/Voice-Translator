@@ -15,7 +15,8 @@ async function seedCountries() {
     console.log('🗑️ Cleared existing countries');
 
     // Convert master countries object to array format for seeding
-    const initialCountries = Object.values(countries).map(country => ({
+    const initialCountries = Object.entries(countries).map(([countryCode, country]) => ({
+      countryCode: countryCode,
       name: country.name,
       isActive: country.isActive
     }));

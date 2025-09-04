@@ -8,6 +8,7 @@ const {
 } = require('../config/firebase');
 
 const bcrypt = require('bcryptjs');
+const userService = require('../services/userService');
 
 class AuthController {
   // Sign Up: Check email → Create Firebase user → Store in MongoDB
@@ -23,9 +24,9 @@ class AuthController {
         });
       }
 
-      // Check if email already exists in MongoDB and is active
-      const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser.isActive) {
+      // Check if email already exists using userService
+      const emailCheck = await userService.checkEmailExists(email);
+      if (emailCheck.exists) {
         return res.status(409).json({
           success: false,
           error: 'User with this email already exists'
@@ -33,19 +34,11 @@ class AuthController {
       }
 
       // If user exists but is deactivated, allow creating new account (keep old record for history)
-      if (existingUser && !existingUser.isActive) {
+      if (emailCheck.user && !emailCheck.isActive) {
         console.log('ℹ️ Deactivated user exists with email, allowing new account creation:', email);
         
-        // If the deactivated user still has a Firebase UID, try to clean it up
-        if (existingUser.firebaseUid) {
-          try {
-            const auth = getAuth();
-            await auth.deleteUser(existingUser.firebaseUid);
-            console.log('🗑️ Cleaned up remaining Firebase user for deactivated account:', existingUser.firebaseUid);
-          } catch (cleanupError) {
-            console.log('ℹ️ Firebase user already deleted or not found:', cleanupError.message);
-          }
-        }
+        // Clean up deactivated user's Firebase account
+        await userService.cleanupDeactivatedUser(emailCheck.user);
       }
 
       // Create Firebase user
@@ -73,9 +66,9 @@ class AuthController {
       console.log('✅ User created successfully, email verification will be sent from frontend');
 
       // Create MongoDB user
-      const user = new User({
+      // Create user in MongoDB using userService
+      const userData = {
         firebaseUid: firebaseUser.uid,
-        isFirebaseUser: true,
         email: firebaseUser.email,
         firstName: firstName,
         lastName: lastName,
@@ -90,9 +83,9 @@ class AuthController {
             providerData: []
           }
         }
-      });
+      };
 
-      await user.save();
+      const user = await userService.createUserWithFirebaseUid(userData);
       console.log('✅ MongoDB user created successfully:', user._id);
 
       // Create custom token for immediate sign-in
@@ -134,8 +127,8 @@ class AuthController {
         });
       }
 
-      // Check if user exists in MongoDB
-      const user = await User.findOne({ email });
+      // Check if user exists in MongoDB using userService
+      const user = await userService.findUserByEmail(email);
       if (!user) {
         return res.status(401).json({
           success: false,
@@ -203,6 +196,9 @@ class AuthController {
       // Create custom token for sign-in
       const customToken = await createCustomToken(user.firebaseUid);
 
+      // Get display names for user data using userService
+      const displayNames = await userService.getUserDisplayNames(user);
+
       res.json({
         success: true,
         message: 'Sign in successful',
@@ -214,7 +210,26 @@ class AuthController {
           lastName: user.lastName,
           emailVerified: firebaseUser.emailVerified,
           role: user.role,
-          isActive: user.isActive
+          isActive: user.isActive,
+          // Include complete user profile data
+          gender: user.gender,
+          country: user.country,
+          preferredLanguage: user.preferredLanguage,
+          recommendedVoice: user.recommendedVoice,
+          settings: user.settings,
+          phoneNumber: user.phoneNumber,
+          state: user.state,
+          age: user.age,
+          avatar: user.avatar,
+          // Include display names
+          genderDisplayName: displayNames.genderDisplayName,
+          countryDisplayName: displayNames.countryDisplayName,
+          languageDisplayName: displayNames.languageDisplayName,
+          voiceDisplayName: displayNames.voiceDisplayName,
+          themeDisplayName: displayNames.themeDisplayName,
+          // Include timestamps
+          createdAt: user.createdAt,
+          lastLogin: new Date().toISOString()
         },
         customToken: customToken
       });
@@ -233,11 +248,8 @@ class AuthController {
       const firebaseUid = req.user?.firebaseUid;
       
       if (firebaseUid) {
-        // Update last active timestamp
-        await User.findOneAndUpdate(
-          { firebaseUid },
-          { 'usageStats.lastActive': new Date() }
-        );
+        // Update last active timestamp using userService
+        await userService.updateLastActive(firebaseUid);
         console.log('✅ User signout logged:', firebaseUid);
       }
 
@@ -266,19 +278,17 @@ class AuthController {
         });
       }
 
-      const existingUser = await User.findOne({ email });
-      
-      // Only consider active users as "existing"
-      const isActiveUser = existingUser && existingUser.isActive;
+      // Check email existence using userService
+      const emailCheck = await userService.checkEmailExists(email);
       
       res.json({
         success: true,
-        exists: isActiveUser,
-        message: isActiveUser ? 'Email already registered' : 'Email available',
-        details: existingUser ? {
-          isActive: existingUser.isActive,
-          isDeactivated: !existingUser.isActive,
-          deactivatedAt: existingUser.deactivatedAt
+        exists: emailCheck.exists,
+        message: emailCheck.exists ? 'Email already registered' : 'Email available',
+        details: emailCheck.user ? {
+          isActive: emailCheck.isActive,
+          isDeactivated: emailCheck.isDeactivated,
+          deactivatedAt: emailCheck.deactivatedAt
         } : null
       });
     } catch (error) {
@@ -302,8 +312,8 @@ class AuthController {
         });
       }
 
-      // Check if user exists
-      const user = await User.findOne({ email });
+      // Check if user exists using userService
+      const user = await userService.findUserByEmail(email);
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -352,8 +362,8 @@ class AuthController {
         });
       }
 
-      // Check if user exists
-      const user = await User.findOne({ email });
+      // Check if user exists using userService
+      const user = await userService.findUserByEmail(email);
       if (!user) {
         // Don't reveal if user exists or not for security
         console.log('ℹ️ Password reset requested for email (user may not exist):', email);
@@ -464,14 +474,8 @@ class AuthController {
         // Get the email from the reset code
         const email = await verifyPasswordResetCode(oobCode);
         
-        // Update MongoDB user's last password change timestamp
-        await User.findOneAndUpdate(
-          { email },
-          { 
-            'security.lastPasswordChange': new Date(),
-            'security.passwordResetAt': new Date()
-          }
-        );
+        // Update MongoDB user's last password change timestamp using userService
+        await userService.updatePasswordResetInfo(email);
         
         res.json({
           success: true,

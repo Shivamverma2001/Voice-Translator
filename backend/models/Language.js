@@ -5,7 +5,7 @@ const languageSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    uppercase: true,
+    uppercase: false,
     minlength: 2,
     maxlength: 5
   },

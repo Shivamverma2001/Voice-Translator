@@ -26,10 +26,25 @@ class UserController {
           message: 'User not found' 
         });
       }
+
+      // Get display names for master data fields
+      const displayNames = await userService.getUserDisplayNames(user);
+      
+      // Combine user data with display names and filter out sensitive data
+      const userData = user.toObject();
+      const userWithDisplayNames = {
+        ...userData,
+        ...displayNames
+      };
+
+      // Remove sensitive security information
+      delete userWithDisplayNames.security;
+      delete userWithDisplayNames.password;
+      delete userWithDisplayNames.__v;
       
       res.json({ 
         success: true,
-        user: user 
+        user: userWithDisplayNames 
       });
     } catch (error) {
       console.error('Error fetching user profile:', error);
