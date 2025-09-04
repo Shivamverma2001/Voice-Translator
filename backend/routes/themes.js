@@ -5,10 +5,12 @@ const { authenticateToken } = require('../middleware/auth');
 
 // Public routes (no authentication required)
 router.get('/', themeController.getAllThemes);
+
 router.get('/search', themeController.searchThemes);
 router.get('/categories', themeController.getUniqueCategories);
 router.get('/category/:category', themeController.getThemesByCategory);
 router.get('/default', themeController.getDefaultTheme);
+router.get('/active', themeController.getAllThemes); // Alias for active themes - must be before /:id
 router.get('/:id', themeController.getThemeById);
 
 // Admin routes (authentication required)
