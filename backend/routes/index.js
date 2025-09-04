@@ -19,6 +19,11 @@ const firebaseAuthRoutes = require('./firebaseAuth');
 const userRoutes = require('./users');
 const authRoutes = require('./auth');
 const webhookRoutes = require('./webhooks');
+const genderRoutes = require('./genders');
+const voiceRoutes = require('./voices');
+const themeRoutes = require('./themes');
+const countryRoutes = require('./countries');
+const countryCodeRoutes = require('./country-codes');
 
 // Apply rate limiting to specific routes
 router.use('/', apiLimiter, apiRoutes); // API overview and status endpoints
@@ -35,5 +40,10 @@ router.use('/firebase-auth', apiLimiter, firebaseAuthRoutes);
 router.use('/users', userRoutes); // Temporarily disabled rate limiting for development
 router.use('/auth', apiLimiter, authRoutes);
 router.use('/webhooks', webhookRoutes); // No rate limiting for webhooks
+router.use('/genders', apiLimiter, genderRoutes);
+router.use('/voices', apiLimiter, voiceRoutes);
+router.use('/themes', apiLimiter, themeRoutes);
+router.use('/countries', apiLimiter, countryRoutes);
+router.use('/country-codes', apiLimiter, countryCodeRoutes);
 
 module.exports = router;
