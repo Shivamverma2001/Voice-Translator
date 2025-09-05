@@ -8,6 +8,7 @@ const { updateFirebaseUserProfile, disableFirebaseUser, getAuth } = require('../
 // Import master data models for display names
 const Gender = require('../models/Gender');
 const Country = require('../models/Country');
+const CountryCode = require('../models/CountryCode');
 const Language = require('../models/Language');
 const Voice = require('../models/Voice');
 const Theme = require('../models/Theme');
@@ -16,9 +17,10 @@ class UserService {
   // Helper function to get display names for user data
   async getUserDisplayNames(user) {
     try {
-      const [genderData, countryData, languageData, voiceData, themeData] = await Promise.all([
+      const [genderData, countryData, countryCodeData, languageData, voiceData, themeData] = await Promise.all([
         user.gender ? Gender.findOne({ id: user.gender, isActive: true }) : null,
         user.country ? Country.findOne({ countryCode: user.country, isActive: true }) : null,
+        user.countryCode ? CountryCode.findOne({ dialingCode: user.countryCode, isActive: true }) : null,
         user.preferredLanguage ? Language.findOne({ shortcode: user.preferredLanguage, isActive: true }) : null,
         user.recommendedVoice ? Voice.findOne({ id: user.recommendedVoice, isActive: true }) : null,
         user.settings?.theme ? Theme.findOne({ id: user.settings.theme, isActive: true }) : null
@@ -27,6 +29,7 @@ class UserService {
       return {
         genderDisplayName: genderData?.displayName || genderData?.name || user.gender,
         countryDisplayName: countryData?.name || user.country,
+        countryCodeDisplayName: countryCodeData ? `${countryCodeData.dialingCode} - ${countryCodeData.country}` : user.countryCode,
         languageDisplayName: languageData?.name || user.preferredLanguage,
         voiceDisplayName: voiceData?.displayName || voiceData?.name || user.recommendedVoice,
         themeDisplayName: themeData?.displayName || themeData?.name || user.settings?.theme
@@ -36,6 +39,7 @@ class UserService {
       return {
         genderDisplayName: user.gender,
         countryDisplayName: user.country,
+        countryCodeDisplayName: user.countryCode,
         languageDisplayName: user.preferredLanguage,
         voiceDisplayName: user.recommendedVoice,
         themeDisplayName: user.settings?.theme
@@ -298,7 +302,7 @@ class UserService {
 
       // Update allowed fields
       const allowedFields = [
-        'firstName', 'lastName', 'age', 'phoneNumber', 'country', 'state',
+        'firstName', 'lastName', 'age', 'phoneNumber', 'countryCode', 'country', 'state',
         'gender', 'preferredLanguage', 'recommendedVoice', 'avatar', 'preferredLanguages', 
         'settings', 'privacySettings'
       ];

@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { getFirebaseAuth, getUserByUid } = require('../config/firebase');
+const userService = require('../services/userService');
 
 class FirebaseAuthController {
   // Health check endpoint
@@ -23,30 +24,38 @@ class FirebaseAuthController {
         });
       }
 
+      // Get display names for the user
+      const displayNames = await userService.getUserDisplayNames(user);
+      
+      // Merge user data with display names
+      const userWithDisplayNames = {
+        id: user._id,
+        firebaseUid: user.firebaseUid,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        age: user.age,
+        phoneNumber: user.phoneNumber,
+        countryCode: user.countryCode,
+        gender: user.gender,
+        avatar: user.avatar,
+        role: user.role,
+        isActive: user.isActive,
+        country: user.country,
+        state: user.state,
+        preferredLanguage: user.preferredLanguage,
+        recommendedVoice: user.recommendedVoice,
+        settings: user.settings,
+        firebaseMetadata: user.firebaseMetadata,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        ...displayNames
+      };
+
       res.status(200).json({
         success: true,
-        user: {
-          id: user._id,
-          firebaseUid: user.firebaseUid,
-          email: user.email,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          age: user.age,
-          phoneNumber: user.phoneNumber,
-          gender: user.gender,
-          avatar: user.avatar,
-          role: user.role,
-          isActive: user.isActive,
-          country: user.country,
-          state: user.state,
-          preferredLanguage: user.preferredLanguage,
-          recommendedVoice: user.recommendedVoice,
-          settings: user.settings,
-          firebaseMetadata: user.firebaseMetadata,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
-        }
+        user: userWithDisplayNames
       });
     } catch (error) {
       console.error('❌ Error getting user profile:', error);
@@ -61,7 +70,7 @@ class FirebaseAuthController {
   async updateProfile(req, res) {
     try {
       const allowedUpdates = [
-        'firstName', 'lastName', 'age', 'phoneNumber', 'gender',
+        'firstName', 'lastName', 'age', 'phoneNumber', 'countryCode', 'gender',
         'country', 'state', 'preferredLanguage', 'recommendedVoice',
         'settings'
       ];
@@ -120,10 +129,19 @@ class FirebaseAuthController {
         }
       }
 
+      // Get display names for the updated user
+      const displayNames = await userService.getUserDisplayNames(user);
+      
+      // Merge user data with display names
+      const userWithDisplayNames = {
+        ...user.toObject(),
+        ...displayNames
+      };
+
       res.status(200).json({
         success: true,
         message: 'Profile updated successfully',
-        user: user
+        user: userWithDisplayNames
       });
     } catch (error) {
       console.error('❌ Error updating user profile:', error);

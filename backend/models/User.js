@@ -74,8 +74,14 @@ const userSchema = new mongoose.Schema({
   phoneNumber: {
     type: String,
     trim: true,
-    required: false, // Make phone number optional
-    match: [/^[\+]?[0-9][\d]{0,15}$/, 'Please enter a valid phone number']
+    required: false // Make phone number optional - no validation for global compatibility
+  },
+  countryCode: {
+    type: String,
+    trim: true,
+    required: false,
+    uppercase: true,
+    maxlength: [4, 'Country code cannot exceed 4 characters']
   },
   gender: {
     type: String,
