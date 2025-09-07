@@ -46,6 +46,7 @@ class FirebaseAuthController {
         state: user.state,
         preferredLanguage: user.preferredLanguage,
         recommendedVoice: user.recommendedVoice,
+        theme: user.settings?.theme || 'light', // Extract theme from settings
         settings: user.settings,
         firebaseMetadata: user.firebaseMetadata,
         createdAt: user.createdAt,
@@ -81,6 +82,14 @@ class FirebaseAuthController {
           updates[key] = req.body[key];
         }
       });
+
+      // Handle theme field separately - move it to settings.theme
+      if (req.body.theme) {
+        if (!updates.settings) {
+          updates.settings = {};
+        }
+        updates.settings.theme = req.body.theme;
+      }
 
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({
