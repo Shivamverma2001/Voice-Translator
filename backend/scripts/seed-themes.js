@@ -23,6 +23,7 @@ async function seedThemes() {
       icon: theme.icon,
       category: theme.category,
       colors: theme.colors,
+      colorsApp: theme.colorsApp,
       isActive: theme.isActive
     }));
 

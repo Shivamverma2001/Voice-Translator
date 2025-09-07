@@ -72,6 +72,42 @@ const themeSchema = new mongoose.Schema({
     selected: { type: String, required: true },
     hover: { type: String, required: true }
   },
+  colorsApp: {
+    // Background colors
+    primary: { type: String, required: true },
+    secondary: { type: String, required: true },
+    tertiary: { type: String, required: true },
+    surface: { type: String, required: true },
+    background: { type: String, required: true },
+    
+    // Text colors
+    textPrimary: { type: String, required: true },
+    textSecondary: { type: String, required: true },
+    textTertiary: { type: String, required: true },
+    
+    // Border colors
+    border: { type: String, required: true },
+    borderLight: { type: String, required: true },
+    
+    // Accent colors
+    accent: { type: String, required: true },
+    accentLight: { type: String, required: true },
+    accentDark: { type: String, required: true },
+    
+    // Status colors
+    success: { type: String, required: true },
+    warning: { type: String, required: true },
+    error: { type: String, required: true },
+    
+    // Interactive colors
+    buttonPrimary: { type: String, required: true },
+    buttonSecondary: { type: String, required: true },
+    buttonText: { type: String, required: true },
+    
+    // Shadow colors
+    shadow: { type: String, required: true },
+    shadowLight: { type: String, required: true }
+  },
   isActive: {
     type: Boolean,
     default: true

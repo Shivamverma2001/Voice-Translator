@@ -44,6 +44,42 @@ const themes = {
       selected: 'bg-blue-50 text-blue-700 border-blue-200',
       hover: 'hover:bg-gray-50'
     },
+    colorsApp: {
+      // Background colors
+      primary: '#ffffff',
+      secondary: '#f8fafc',
+      tertiary: '#f1f5f9',
+      surface: '#ffffff',
+      background: '#ffffff',
+      
+      // Text colors
+      textPrimary: '#111827',
+      textSecondary: '#374151',
+      textTertiary: '#6b7280',
+      
+      // Border colors
+      border: '#e2e8f0',
+      borderLight: '#f1f5f9',
+      
+      // Accent colors
+      accent: '#3b82f6',
+      accentLight: '#eff6ff',
+      accentDark: '#1d4ed8',
+      
+      // Status colors
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      
+      // Interactive colors
+      buttonPrimary: '#3b82f6',
+      buttonSecondary: '#f8fafc',
+      buttonText: '#ffffff',
+      
+      // Shadow colors
+      shadow: '#000000',
+      shadowLight: '#000000'
+    },
     isActive: true
   },
 
@@ -88,6 +124,42 @@ const themes = {
       shadowLarge: 'shadow-lg',
       selected: 'bg-cyan-50 text-cyan-700 border-cyan-300',
       hover: 'hover:bg-cyan-200'
+    },
+    colorsApp: {
+      // Background colors
+      primary: '#ffffff',
+      secondary: '#f0fdfa',
+      tertiary: '#ccfbf1',
+      surface: '#ffffff',
+      background: '#f0fdfa',
+      
+      // Text colors
+      textPrimary: '#0f766e',
+      textSecondary: '#0d9488',
+      textTertiary: '#14b8a6',
+      
+      // Border colors
+      border: '#14b8a6',
+      borderLight: '#5eead4',
+      
+      // Accent colors
+      accent: '#0d9488',
+      accentLight: '#ccfbf1',
+      accentDark: '#0f766e',
+      
+      // Status colors
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      
+      // Interactive colors
+      buttonPrimary: '#0d9488',
+      buttonSecondary: '#ccfbf1',
+      buttonText: '#ffffff',
+      
+      // Shadow colors
+      shadow: '#0f766e',
+      shadowLight: '#14b8a6'
     },
     isActive: true
   },
@@ -134,6 +206,42 @@ const themes = {
       selected: 'bg-orange-50 text-orange-700 border-orange-300',
       hover: 'hover:bg-orange-200'
     },
+    colorsApp: {
+      // Background colors
+      primary: '#ffffff',
+      secondary: '#fef7ed',
+      tertiary: '#fed7aa',
+      surface: '#ffffff',
+      background: '#fef7ed',
+      
+      // Text colors
+      textPrimary: '#9a3412',
+      textSecondary: '#c2410c',
+      textTertiary: '#ea580c',
+      
+      // Border colors
+      border: '#ea580c',
+      borderLight: '#fb923c',
+      
+      // Accent colors
+      accent: '#c2410c',
+      accentLight: '#fed7aa',
+      accentDark: '#9a3412',
+      
+      // Status colors
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      
+      // Interactive colors
+      buttonPrimary: '#c2410c',
+      buttonSecondary: '#fed7aa',
+      buttonText: '#ffffff',
+      
+      // Shadow colors
+      shadow: '#9a3412',
+      shadowLight: '#ea580c'
+    },
     isActive: true
   },
 
@@ -179,6 +287,42 @@ const themes = {
       selected: 'bg-green-50 text-green-700 border-green-200',
       hover: 'hover:bg-green-50'
     },
+    colorsApp: {
+      // Background colors
+      primary: '#ffffff',
+      secondary: '#f0fdf4',
+      tertiary: '#dcfce7',
+      surface: '#ffffff',
+      background: '#f0fdf4',
+      
+      // Text colors
+      textPrimary: '#14532d',
+      textSecondary: '#166534',
+      textTertiary: '#16a34a',
+      
+      // Border colors
+      border: '#16a34a',
+      borderLight: '#4ade80',
+      
+      // Accent colors
+      accent: '#166534',
+      accentLight: '#dcfce7',
+      accentDark: '#14532d',
+      
+      // Status colors
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      
+      // Interactive colors
+      buttonPrimary: '#166534',
+      buttonSecondary: '#dcfce7',
+      buttonText: '#ffffff',
+      
+      // Shadow colors
+      shadow: '#14532d',
+      shadowLight: '#16a34a'
+    },
     isActive: true
   },
 
@@ -223,6 +367,42 @@ const themes = {
       shadowLarge: 'shadow-lg',
       selected: 'bg-purple-50 text-purple-700 border-purple-200',
       hover: 'hover:bg-purple-50'
+    },
+    colorsApp: {
+      // Background colors
+      primary: '#ffffff',
+      secondary: '#faf5ff',
+      tertiary: '#f3e8ff',
+      surface: '#ffffff',
+      background: '#faf5ff',
+      
+      // Text colors
+      textPrimary: '#581c87',
+      textSecondary: '#7c3aed',
+      textTertiary: '#a855f7',
+      
+      // Border colors
+      border: '#a855f7',
+      borderLight: '#c084fc',
+      
+      // Accent colors
+      accent: '#7c3aed',
+      accentLight: '#f3e8ff',
+      accentDark: '#581c87',
+      
+      // Status colors
+      success: '#10b981',
+      warning: '#f59e0b',
+      error: '#ef4444',
+      
+      // Interactive colors
+      buttonPrimary: '#7c3aed',
+      buttonSecondary: '#f3e8ff',
+      buttonText: '#ffffff',
+      
+      // Shadow colors
+      shadow: '#581c87',
+      shadowLight: '#a855f7'
     },
     isActive: true
   }
