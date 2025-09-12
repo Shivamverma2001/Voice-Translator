@@ -161,6 +161,10 @@ const userSchema = new mongoose.Schema({
     theme: {
       type: String,
       default: 'light'
+    },
+    labelLanguage: {
+      type: String,
+      default: 'en'
     }
   },
   // Security & Verification

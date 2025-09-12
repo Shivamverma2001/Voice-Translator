@@ -58,6 +58,10 @@ const authenticateFirebaseToken = async (req, res, next) => {
           email: firebaseUser.email,
           firstName: firebaseUser.displayName?.split(' ')[0] || '',
           lastName: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+          settings: {
+            theme: 'light',
+            labelLanguage: 'en'
+          },
           firebaseMetadata: {
             lastSync: new Date(),
             firebaseData: {
@@ -84,6 +88,19 @@ const authenticateFirebaseToken = async (req, res, next) => {
             providerData: firebaseUser.providerData
           }
         };
+        
+        // Initialize settings if they don't exist
+        if (!user.settings) {
+          user.settings = {
+            theme: 'light',
+            labelLanguage: 'en'
+          };
+        } else {
+          // Ensure labelLanguage exists in settings
+          if (!user.settings.labelLanguage) {
+            user.settings.labelLanguage = 'en';
+          }
+        }
         
         // Update email if it changed
         if (user.email !== firebaseUser.email) {
